@@ -39,13 +39,13 @@ var score: int = 0
 var active_phantoms: Array[Phantom] = []
 var phantom_resources: Array[PhantomData] = []
 var spawn_timer: float = 0.0
-var spawn_interval: float = 1.0  # FASTER: was 1.5
-var max_phantoms: int = 8  # MORE: was 6
+var spawn_interval: float = 0.8  # FASTER: was 1.0
+var max_phantoms: int = 10  # MORE: was 8
 
 # addiction mechanics - escalation
 var survival_time: float = 0.0
 var last_transformation: float = 0.0
-var transformation_interval: float = 20.0  # FASTER: was 30.0
+var transformation_interval: float = 15.0  # FASTER: was 20.0
 var transformation_level: int = 0
 var typing_speed_multiplier: float = 1.0
 
@@ -181,9 +181,9 @@ func start_game():
 	can_accept_input = true
 	spawn_timer = spawn_interval
 	
-	# HIGH STAKES: Start with 5 phantoms immediately
-	for i in range(5):
-		await get_tree().create_timer(0.3 * i).timeout
+	# HIGH STAKES: Start with 7 phantoms immediately for more action
+	for i in range(7):
+		await get_tree().create_timer(0.2 * i).timeout
 		spawn_phantom()
 	
 	# Draw cards for this run
@@ -295,7 +295,16 @@ func _process(delta):
 		trigger_wake_up()
 
 func _unhandled_input(event):
-	if not can_accept_input or is_typing_blocked:
+	if is_typing_blocked:
+		return
+	
+	# Allow input during upgrade choice
+	if choosing_upgrade:
+		if event is InputEventKey and event.pressed and not event.is_echo():
+			handle_key_input(event)
+		return
+	
+	if not can_accept_input:
 		return
 
 	if event is InputEventKey and event.pressed and not event.is_echo():
@@ -331,13 +340,29 @@ func process_character_input(character: String):
 	idle_timer = 0.0
 	
 	if choosing_upgrade:
-		current_typed_string += character
+		current_typed_string += character.to_lower()
+		
+		# Check if we completed typing an option
 		if current_typed_string in upgrade_options:
 			apply_upgrade(current_typed_string)
 			current_typed_string = ""
 			choosing_upgrade = false
 			can_accept_input = true
+			if status_text:
+				status_text.text = "lucidity: %d%% | score:%d" % [int(lucidity/max_lucidity*100), score]
 			return
+		
+		# Check if current string doesn't match any option - reset
+		var matches_any = false
+		for option in upgrade_options:
+			if option.begins_with(current_typed_string):
+				matches_any = true
+				break
+		
+		if not matches_any:
+			current_typed_string = ""
+		
+		return
 	
 	# track rhythm for flow state
 	var current_time = Time.get_ticks_msec() / 1000.0
@@ -777,14 +802,17 @@ func trigger_transformation():
 	]
 	show_transformation_message(messages[transformation_level % messages.size()])
 	
-	# Pause for upgrade choice
+	# Wait for message to show, then pause for upgrade choice
+	await get_tree().create_timer(1.0).timeout
+	
 	can_accept_input = false
 	choosing_upgrade = true
 	upgrade_options = ["speed", "health", "damage"]
+	current_typed_string = ""
 	
 	# Show choices
 	if status_text:
-		status_text.text = "choose upgrade:\ntype 'speed', 'health', or 'damage'"
+		status_text.text = "type: speed / health / damage"
 	
 	# massive screen shake
 	add_screen_shake(20.0)
@@ -1170,7 +1198,7 @@ func spawn_static_burst(pos: Vector2):
 func spawn_screen_static_flash():
 	# Full screen static flash
 	var static_rect = ColorRect.new()
-	static_rect.size = Vector2(960, 540)
+	static_rect.size = Vector2(1280, 720)
 	static_rect.position = Vector2.ZERO
 	static_rect.color = Color.WHITE
 	static_rect.z_index = 99
