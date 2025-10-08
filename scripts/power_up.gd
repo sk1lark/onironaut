@@ -25,7 +25,7 @@ func setup(data: Resource, spawn_pos: Vector2):
 func _process(delta):
 	lifetime += delta
 	# Float toward center slowly
-	var center = Vector2(480, 270)
+	var center = Vector2(640, 360)
 	var direction = (center - position).normalized()
 	position += direction * move_speed * delta
 	

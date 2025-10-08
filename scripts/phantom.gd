@@ -14,9 +14,9 @@ var original_modulate: Color
 
 # circular motion variables
 var spawn_position: Vector2
-var target_center: Vector2 = Vector2(480, 270)
+var target_center: Vector2 = Vector2(640, 360)
 var spiral_time: float = 0.0
-var spiral_radius: float = 300.0
+var spiral_radius: float = 400.0
 var spiral_speed: float = 0.3
 
 # attack system - only when player is idle

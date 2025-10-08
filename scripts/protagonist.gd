@@ -13,7 +13,7 @@ var is_attacking = false
 var has_shield = false
 
 func _ready():
-	position = Vector2(480, 270)  # Center of 960x540
+	position = Vector2(640, 360)  # Center of 1280x720
 	body_label.text = "~"
 
 func _process(delta):

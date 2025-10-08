@@ -519,7 +519,7 @@ func trigger_typo():
 	damage_lucidity(5.0)
 	
 	# show miss indicator
-	show_floating_text("miss", Vector2(480, 270), Color.RED)
+	show_floating_text("miss", Vector2(640, 360), Color.RED)
 
 func handle_backspace():
 	if current_typed_string.length() > 0:
@@ -575,8 +575,8 @@ func spawn_phantom():
 
 	# spawn phantoms at random positions around the edge - they'll spiral inward
 	var angle = randf() * TAU  # random angle around circle
-	var distance = 350.0  # start far from center
-	var center = Vector2(480, 270)
+	var distance = 500.0  # start far from center
+	var center = Vector2(640, 360)
 	var spawn_pos = center + Vector2(cos(angle), sin(angle)) * distance
 	
 	phantom_instance.position = spawn_pos
@@ -620,8 +620,8 @@ func heal_lucidity(amount: float):
 
 func update_health_bar():
 	var health_percentage = lucidity / max_lucidity
-	# Health bar occupies 660px width in the new layout
-	var full_width = 660.0
+	# Health bar occupies 880px width (scaled for 1280x720)
+	var full_width = 880.0
 	var bar_width = full_width * health_percentage
 	
 	# animate health bar changes
@@ -630,11 +630,18 @@ func update_health_bar():
 
 	# Position static effect to start where health ends
 	if health_static:
-		health_static.position.x = 120 + bar_width
+		health_static.position.x = 160 + bar_width
 		health_static.size.x = full_width - bar_width
-		# Make static more visible as health decreases
+		# Make static more visible as health decreases - MORE SURREAL
 		var static_intensity = 1.0 - health_percentage
-		health_static.modulate.a = 0.2 + (static_intensity * 0.8)
+		health_static.modulate.a = 0.3 + (static_intensity * 0.7)
+		
+		# Particle-like glitch effect
+		if health_static.material:
+			var shader_mat = health_static.material as ShaderMaterial
+			if shader_mat:
+				var glitch_amount = static_intensity * 60.0
+				shader_mat.set_shader_parameter("noise_speed", glitch_amount)
 	
 	# Update status text with transformation info
 	if status_text:
@@ -807,7 +814,7 @@ func show_transformation_message(msg: String):
 	label.add_theme_color_override("font_color", Color.WHITE)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.position = Vector2(480, 270)
+	label.position = Vector2(640, 360)
 	label.size = Vector2(400, 100)
 	label.pivot_offset = Vector2(200, 50)
 	label.z_index = 100
@@ -1040,7 +1047,7 @@ func check_chain_reaction(explosion_pos: Vector2):
 func check_near_misses():
 	# Check for phantoms in danger zone and create tension
 	near_miss_count = 0
-	var center = Vector2(480, 270)
+	var center = Vector2(640, 360)
 	
 	for phantom in active_phantoms:
 		var distance = phantom.position.distance_to(center)
@@ -1111,29 +1118,29 @@ func _on_power_up_collected(power_data: PowerUpData):
 		"shield":
 			if protagonist and protagonist.has_method("activate_shield"):
 				protagonist.activate_shield(power_data.duration)
-			show_floating_text("shield", Vector2(480, 270), Color.CYAN)
+			show_floating_text("shield", Vector2(640, 360), Color.CYAN)
 		"slow":
 			typing_speed_multiplier = max(0.5, typing_speed_multiplier - 0.2)
 			await get_tree().create_timer(power_data.duration).timeout
 			typing_speed_multiplier += 0.2
-			show_floating_text("slow", Vector2(480, 270), Color.GREEN)
+			show_floating_text("slow", Vector2(640, 360), Color.GREEN)
 		"rapid":
 			typing_speed_multiplier += 0.3
 			await get_tree().create_timer(power_data.duration).timeout  
 			typing_speed_multiplier -= 0.3
-			show_floating_text("rapid", Vector2(480, 270), Color.YELLOW)
+			show_floating_text("rapid", Vector2(640, 360), Color.YELLOW)
 		"clear":
 			# Clear closest phantom
 			if active_phantoms.size() > 0:
 				var closest = active_phantoms[0]
-				var center = Vector2(480, 270)
+				var center = Vector2(640, 360)
 				for phantom in active_phantoms:
 					if phantom.position.distance_to(center) < closest.position.distance_to(center):
 						closest = phantom
 				active_phantoms.erase(closest)
 				spawn_completion_burst(closest.position)
 				closest.queue_free()
-				show_floating_text("clear", Vector2(480, 270), Color.RED)
+				show_floating_text("clear", Vector2(640, 360), Color.RED)
 
 # ============================================
 # JUICE & EFFECTS
@@ -1197,7 +1204,7 @@ func apply_crt_glitch(intensity: float, duration: float = 0.2):
 
 func _on_phantom_attacks(phantom: Phantom):
 	# Phantom shoots static at player
-	spawn_static_projectile(phantom.position, Vector2(480, 270))
+	spawn_static_projectile(phantom.position, Vector2(640, 360))
 	
 	# HIGH STAKES: More damage from phantom attacks
 	damage_lucidity(phantom_damage)
@@ -1213,7 +1220,7 @@ func _on_phantom_attacks(phantom: Phantom):
 	add_screen_shake(10.0)  # INCREASED
 	
 	# Static burst at player
-	spawn_static_burst(Vector2(480, 270))
+	spawn_static_burst(Vector2(640, 360))
 	
 	# CRT glitch on hit
 	apply_crt_glitch(0.5, 0.2)
