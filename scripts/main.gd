@@ -39,8 +39,8 @@ var score: int = 0
 var active_phantoms: Array[Phantom] = []
 var phantom_resources: Array[PhantomData] = []
 var spawn_timer: float = 0.0
-var spawn_interval: float = 1.5  # FASTER: was 3.0
-var max_phantoms: int = 6  # MORE: was 4
+var spawn_interval: float = 1.0  # FASTER: was 1.5
+var max_phantoms: int = 8  # MORE: was 6
 
 # addiction mechanics - escalation
 var survival_time: float = 0.0
@@ -50,9 +50,9 @@ var transformation_level: int = 0
 var typing_speed_multiplier: float = 1.0
 
 # HIGH STAKES mechanics
-var health_drain_per_second: float = 1.5  # Passive drain
-var phantom_damage: float = 8.0  # Phantom attack damage
-var mistake_damage: float = 12.0  # Wrong key damage
+var health_drain_per_second: float = 2.0  # HARDER: was 1.5
+var phantom_damage: float = 12.0  # HARDER: was 8.0
+var mistake_damage: float = 18.0  # HARDER: was 12.0
 var time_pressure_multiplier: float = 1.0
 
 # addiction mechanics - juice
@@ -71,6 +71,8 @@ var damage_reduction: float = 0.0
 var health_regen_bonus: float = 0.0
 var max_phantoms_bonus: int = 0
 var power_up_chance_bonus: float = 0.0
+var choosing_upgrade: bool = false
+var upgrade_options: Array[String] = []
 var near_miss_count: int = 0
 var danger_zone_radius: float = 120.0  # BIGGER: was 80.0
 var streak_multiplier: float = 1.0
@@ -213,6 +215,15 @@ func apply_card_effect(card: CardData):
 		"power_up_chance":
 			power_up_chance_bonus += card.value
 
+func apply_upgrade(upgrade: String):
+	match upgrade:
+		"speed":
+			typing_speed_multiplier += 0.2
+		"health":
+			heal_lucidity(20.0)
+		"damage":
+			damage_reduction += 0.2
+
 func show_drawn_cards():
 	# For now, print to console
 	print("Drawn cards:")
@@ -318,6 +329,15 @@ func handle_key_input(event: InputEventKey):
 func process_character_input(character: String):
 	# Reset idle timer - player is typing!
 	idle_timer = 0.0
+	
+	if choosing_upgrade:
+		current_typed_string += character
+		if current_typed_string in upgrade_options:
+			apply_upgrade(current_typed_string)
+			current_typed_string = ""
+			choosing_upgrade = false
+			can_accept_input = true
+			return
 	
 	# track rhythm for flow state
 	var current_time = Time.get_ticks_msec() / 1000.0
@@ -716,6 +736,8 @@ func reset_game():
 	max_phantoms_bonus = 0
 	power_up_chance_bonus = 0.0
 	drawn_cards.clear()
+	choosing_upgrade = false
+	upgrade_options.clear()
 
 	# Update UI
 	update_health_bar()
@@ -747,6 +769,15 @@ func trigger_transformation():
 		"evolving"
 	]
 	show_transformation_message(messages[transformation_level % messages.size()])
+	
+	# Pause for upgrade choice
+	can_accept_input = false
+	choosing_upgrade = true
+	upgrade_options = ["speed", "health", "damage"]
+	
+	# Show choices
+	if status_text:
+		status_text.text = "choose upgrade:\ntype 'speed', 'health', or 'damage'"
 	
 	# massive screen shake
 	add_screen_shake(20.0)

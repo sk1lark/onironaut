@@ -60,7 +60,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("2_1")
 theme_override_font_sizes/font_size = 72
-text = "THE ONEIRONAUT"
+text = "the onironaut"
 horizontal_alignment = 1
 vertical_alignment = 1
 
@@ -69,7 +69,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("2_1")
 theme_override_font_sizes/font_size = 24
-text = "~ type to survive ~"
+text = "type to dream"
 horizontal_alignment = 1
 vertical_alignment = 1
 
