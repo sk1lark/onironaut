@@ -1,0 +1,30 @@
+[gd_scene load_steps=3 format=3 uid="uid://clwqmvvnb32rp"]
+
+[ext_resource type="Script" path="res://scripts/sound_manager.gd" id="1_1"]
+[ext_resource type="AudioStream" path="res://sounds/lucidity.mp3" id="2_1"]
+
+[node name="SoundManager" type="Node"]
+script = ExtResource("1_1")
+
+[node name="KeypressPlayer" type="AudioStreamPlayer" parent="."]
+
+[node name="ResolvePlayer" type="AudioStreamPlayer" parent="."]
+
+[node name="GlitchPlayer" type="AudioStreamPlayer" parent="."]
+
+[node name="BackgroundMusic" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("2_1")
+autoplay = true
+bus = &"Master"
+
+[node name="TypePlayer" type="AudioStreamPlayer" parent="."]
+stream = null
+volume_db = -5.0
+
+[node name="DealtPlayer" type="AudioStreamPlayer" parent="."]
+stream = null
+volume_db = 0.0
+
+[node name="HurtPlayer" type="AudioStreamPlayer" parent="."]
+stream = null
+volume_db = 0.0

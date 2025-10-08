@@ -1,0 +1,149 @@
+[gd_scene load_steps=11 format=3 uid="uid://dxjk4yv5wqbih"]
+
+[ext_resource type="Script" path="res://scripts/main.gd" id="1_1"]
+[ext_resource type="Shader" path="res://shaders/dither_shader.gdshader" id="2_1"]
+[ext_resource type="FontFile" uid="uid://boipgfyx6mikt" path="res://fonts/monogram-extended.ttf" id="3_1"]
+[ext_resource type="Shader" path="res://shaders/static_shader.gdshader" id="4_1"]
+[ext_resource type="Shader" path="res://shaders/ascii_background.gdshader" id="5_1"]
+[ext_resource type="Shader" path="res://shaders/vignette_shader.gdshader" id="6_1"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_1"]
+shader = ExtResource("2_1")
+shader_parameter/dither_strength = 0.15
+shader_parameter/contrast = 1.3
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_2"]
+shader = ExtResource("4_1")
+shader_parameter/noise_speed = 12.0
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_3"]
+shader = ExtResource("5_1")
+shader_parameter/time_scale = 0.08
+shader_parameter/texture_scale = 25.0
+shader_parameter/depth = 0.3
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_4"]
+shader = ExtResource("6_1")
+shader_parameter/intensity = 0.5
+shader_parameter/falloff = 0.6
+
+[node name="Main" type="Node2D"]
+script = ExtResource("1_1")
+
+[node name="Camera2D" type="Camera2D" parent="."]
+offset = Vector2(480, 270)
+anchor_mode = 0
+
+[node name="Background" type="CanvasLayer" parent="."]
+layer = -1
+
+[node name="ColorRect" type="ColorRect" parent="Background"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.0, 0.0, 0.0, 1)
+
+[node name="ASCIIBackground" type="ColorRect" parent="Background"]
+material = SubResource("ShaderMaterial_3")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(1, 1, 1, 1)
+
+[node name="Vignette" type="ColorRect" parent="Background"]
+material = SubResource("ShaderMaterial_4")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(1, 1, 1, 1)
+
+[node name="DitherLayer" type="CanvasLayer" parent="."]
+layer = 100
+visible = true
+
+[node name="DitherShader" type="ColorRect" parent="DitherLayer"]
+material = SubResource("ShaderMaterial_1")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(1, 1, 1, 1)
+mouse_filter = 2
+
+[node name="CRTLayer" type="CanvasLayer" parent="."]
+layer = 101
+visible = false
+
+[node name="CRTShader" type="ColorRect" parent="CRTLayer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(1, 1, 1, 1)
+mouse_filter = 2
+
+[node name="GameplayArea" type="Node2D" parent="."]
+
+[node name="PhantomSpawner" type="Node2D" parent="GameplayArea"]
+
+[node name="PhantomContainer" type="Node2D" parent="GameplayArea"]
+
+[node name="PowerUpContainer" type="Node2D" parent="GameplayArea"]
+
+[node name="ProtagonistContainer" type="Node2D" parent="GameplayArea"]
+
+[node name="UILayer" type="CanvasLayer" parent="."]
+
+[node name="HealthBar" type="ColorRect" parent="UILayer"]
+offset_left = 120.0
+offset_top = 500.0
+offset_right = 780.0
+offset_bottom = 520.0
+color = Color(1, 1, 1, 1)
+
+[node name="HealthStatic" type="ColorRect" parent="UILayer"]
+material = SubResource("ShaderMaterial_2")
+offset_left = 480.0
+offset_top = 500.0
+offset_right = 780.0
+offset_bottom = 520.0
+color = Color(1, 1, 1, 1)
+
+[node name="Cursor" type="Label" parent="UILayer"]
+offset_left = 120.0
+offset_top = 470.0
+offset_right = 600.0
+offset_bottom = 496.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("3_1")
+theme_override_font_sizes/font_size = 24
+text = ">_"
+
+[node name="StatusText" type="Label" parent="UILayer"]
+offset_left = 120.0
+offset_top = 20.0
+offset_right = 400.0
+offset_bottom = 50.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("3_1")
+theme_override_font_sizes/font_size = 20
+text = "LUCIDITY: 100%"
+
+[node name="TransitionLayer" type="CanvasLayer" parent="."]
+
+[node name="TransitionRect" type="ColorRect" parent="TransitionLayer"]
+modulate = Color(1, 1, 1, 0)
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.0392157, 0.0392157, 0.0392157, 1)

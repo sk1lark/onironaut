@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="PowerUpData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/power_up_data.gd" id="1_1"]
+
+[resource]
+script = ExtResource("1_1")
+power_type = "slow"
+symbol = "[-]"
+duration = 5.0
+spawn_chance = 0.15

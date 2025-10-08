@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="PhantomData" load_steps=2 format=3 uid="uid://cu85j5352sfcd"]
+
+[ext_resource type="Script" uid="uid://ddfi44iae4wha" path="res://scripts/phantom_data.gd" id="1_1"]
+
+[resource]
+script = ExtResource("1_1")
+art = " (o.o)
+_(o.o)_"
+text_to_type = "that song"
+base_speed = 35.0
