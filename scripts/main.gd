@@ -33,6 +33,7 @@ var resonance: int = 0
 var is_in_sync: bool = false
 var current_level: int = 1
 var is_typing_blocked: bool = false
+var score: int = 0
 
 # Phantom management
 var active_phantoms: Array[Phantom] = []
@@ -333,6 +334,7 @@ func complete_focused_phantom():
 	# increment combo first so we can use it
 	increment_combo()
 	perfect_streak += 1
+	score += 10 + (combo_count * 5)
 
 	# HIGH STAKES: Heal on completion (lifeline!)
 	var heal_amount = 5.0 + (combo_count * 0.5)  # More healing with combo
@@ -559,6 +561,7 @@ func update_health_bar():
 		var status = "lucidity: %d%%" % int(health_percentage * 100)
 		if transformation_level > 0:
 			status += " | lv:" + str(transformation_level)
+		status += " | score:" + str(score)
 		status_text.text = status
 		
 		# pulse text when low health
@@ -594,6 +597,7 @@ func trigger_wake_up():
 	
 	# show stats before reset
 	show_game_over_stats()
+	save_high_score()
 
 	# white flash
 	var flash = create_tween()
@@ -606,7 +610,8 @@ func trigger_wake_up():
 func show_game_over_stats():
 	var stats_text = "survived: " + str(int(survival_time)) + "s\n"
 	stats_text += "level: " + str(transformation_level) + "\n"
-	stats_text += "best combo: " + str(combo_count)
+	stats_text += "best combo: " + str(combo_count) + "\n"
+	stats_text += "score: " + str(score)
 	
 	var label = Label.new()
 	label.text = stats_text
@@ -645,6 +650,7 @@ func reset_game():
 	combo_timer = 0.0
 	perfect_streak = 0
 	flow_intensity = 0.0
+	score = 0
 
 	# Update UI
 	update_health_bar()
@@ -1140,3 +1146,23 @@ func spawn_static_projectile(from_pos: Vector2, to_pos: Vector2):
 		spawn_static_burst(to_pos)
 		projectile.queue_free()
 	)
+
+# ============================================
+# high score system
+# ============================================
+
+func save_high_score():
+	var high_score = load_high_score()
+	if score > high_score:
+		var file = FileAccess.open("user://high_score.txt", FileAccess.WRITE)
+		if file:
+			file.store_string(str(score))
+			file.close()
+
+func load_high_score() -> int:
+	var file = FileAccess.open("user://high_score.txt", FileAccess.READ)
+	if file:
+		var content = file.get_as_text()
+		file.close()
+		return int(content)
+	return 0
