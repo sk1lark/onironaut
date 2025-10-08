@@ -65,6 +65,12 @@ var perfect_streak: int = 0
 # NEW addiction mechanics - power-ups & danger
 var active_power_ups: Array = []
 var power_up_resources: Array[PowerUpData] = []
+var card_resources: Array[CardData] = []
+var drawn_cards: Array[CardData] = []
+var damage_reduction: float = 0.0
+var health_regen_bonus: float = 0.0
+var max_phantoms_bonus: int = 0
+var power_up_chance_bonus: float = 0.0
 var near_miss_count: int = 0
 var danger_zone_radius: float = 120.0  # BIGGER: was 80.0
 var streak_multiplier: float = 1.0
@@ -102,6 +108,7 @@ func _ready():
 	setup_game()
 	load_phantom_resources()
 	load_power_up_resources()
+	load_card_resources()
 	spawn_protagonist()
 	start_game()
 
@@ -129,6 +136,20 @@ func load_power_up_resources():
 				var resource = load("res://power_ups/" + file_name) as PowerUpData
 				if resource:
 					power_up_resources.append(resource)
+			file_name = dir.get_next()
+		dir.list_dir_end()
+
+func load_card_resources():
+	# Load card resources
+	var dir = DirAccess.open("res://cards/")
+	if dir:
+		dir.list_dir_begin()
+		var file_name = dir.get_next()
+		while file_name != "":
+			if file_name.ends_with(".tres"):
+				var resource = load("res://cards/" + file_name) as CardData
+				if resource:
+					card_resources.append(resource)
 			file_name = dir.get_next()
 		dir.list_dir_end()
 
@@ -162,6 +183,41 @@ func start_game():
 	for i in range(5):
 		await get_tree().create_timer(0.3 * i).timeout
 		spawn_phantom()
+	
+	# Draw cards for this run
+	draw_cards()
+
+func draw_cards():
+	if card_resources.size() == 0:
+		return
+	
+	drawn_cards.clear()
+	for i in 3:
+		var card = card_resources.pick_random()
+		drawn_cards.append(card)
+		apply_card_effect(card)
+	
+	# Show drawn cards
+	show_drawn_cards()
+
+func apply_card_effect(card: CardData):
+	match card.effect:
+		"typing_speed":
+			typing_speed_multiplier += card.value
+		"damage_reduction":
+			damage_reduction += card.value
+		"health_regen":
+			health_regen_bonus += card.value
+		"max_phantoms":
+			max_phantoms_bonus += int(card.value)
+		"power_up_chance":
+			power_up_chance_bonus += card.value
+
+func show_drawn_cards():
+	# For now, print to console
+	print("Drawn cards:")
+	for card in drawn_cards:
+		print(card.name + ": " + card.description)
 
 func _process(delta):
 	if not can_accept_input:
@@ -173,6 +229,10 @@ func _process(delta):
 	# HIGH STAKES: Constant health drain (gets faster over time)
 	var drain_rate = health_drain_per_second * time_pressure_multiplier
 	damage_lucidity(drain_rate * delta)
+	
+	# Card bonus: Health regen
+	if health_regen_bonus > 0:
+		heal_lucidity(health_regen_bonus * delta)
 	
 	# Track idle time for phantom attacks
 	idle_timer += delta
@@ -212,7 +272,7 @@ func _process(delta):
 	# Handle phantom spawning - gets faster with transformations
 	var adjusted_spawn_interval = spawn_interval / typing_speed_multiplier
 	spawn_timer -= delta
-	if spawn_timer <= 0.0 and active_phantoms.size() < max_phantoms:
+	if spawn_timer <= 0.0 and active_phantoms.size() < max_phantoms + max_phantoms_bonus:
 		spawn_phantom()
 		spawn_timer = adjusted_spawn_interval
 
@@ -531,7 +591,7 @@ func _on_phantom_completed(_phantom: Phantom):
 	pass
 
 func damage_lucidity(amount: float):
-	lucidity = max(0.0, lucidity - amount)
+	lucidity = max(0.0, lucidity - amount * (1.0 - damage_reduction))
 	update_health_bar()
 
 func heal_lucidity(amount: float):
@@ -651,6 +711,11 @@ func reset_game():
 	perfect_streak = 0
 	flow_intensity = 0.0
 	score = 0
+	damage_reduction = 0.0
+	health_regen_bonus = 0.0
+	max_phantoms_bonus = 0
+	power_up_chance_bonus = 0.0
+	drawn_cards.clear()
 
 	# Update UI
 	update_health_bar()
@@ -672,14 +737,14 @@ func trigger_transformation():
 	
 	# show transformation message
 	var messages = [
-		"faster",
-		"connecting",
-		"dissolving",
-		"synchronizing", 
-		"accelerating",
-		"fragmenting",
-		"merging",
-		"cascading"
+		"The pulse quickens...",
+		"Memories intertwine...",
+		"Boundaries dissolve...",
+		"Echoes synchronize...",
+		"Velocity cascades...",
+		"Fragments coalesce...",
+		"Waves merge...",
+		"Infinity beckons..."
 	]
 	show_transformation_message(messages[transformation_level % messages.size()])
 	
@@ -998,7 +1063,7 @@ func maybe_spawn_power_up(pos: Vector2):
 		return
 	
 	# Higher combo = higher chance
-	var spawn_chance = 0.1 + (combo_count * 0.02)
+	var spawn_chance = 0.1 + (combo_count * 0.02) + power_up_chance_bonus
 	if randf() < spawn_chance:
 		var power_data = power_up_resources.pick_random()
 		var power_up = PowerUpScene.instantiate()

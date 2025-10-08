@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/card_data.gd" id="1_1"]
+
+[resource]
+script = ExtResource("1_1")
+name = "Rapid"
+description = "Increase typing speed by 20%"
+effect = "typing_speed"
+value = 0.2
+rarity = 1.0

@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="CardData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/card_data.gd" id="1_1"]
+
+[resource]
+script = ExtResource("1_1")
+name = "Swarm"
+description = "Spawn 2 more phantoms at once"
+effect = "max_phantoms"
+value = 2.0
+rarity = 1.0
