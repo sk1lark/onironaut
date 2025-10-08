@@ -737,14 +737,14 @@ func trigger_transformation():
 	
 	# show transformation message
 	var messages = [
-		"The pulse quickens...",
-		"Memories intertwine...",
-		"Boundaries dissolve...",
-		"Echoes synchronize...",
-		"Velocity cascades...",
-		"Fragments coalesce...",
-		"Waves merge...",
-		"Infinity beckons..."
+		"accelerating",
+		"syncing",
+		"fragmenting",
+		"merging",
+		"cascading",
+		"amplifying",
+		"distorting",
+		"evolving"
 	]
 	show_transformation_message(messages[transformation_level % messages.size()])
 	
