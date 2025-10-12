@@ -11,7 +11,7 @@ extends Node
 
 func _ready():
 	load_sound_effects()
-	start_background_music()
+	# Don't auto-start background music - let scenes control it
 
 func load_sound_effects():
 	# Load the sound files
@@ -31,8 +31,18 @@ func load_sound_effects():
 			hurt_player.stream = hurt_sound
 
 func start_background_music():
-	if background_music:
+	if background_music and not background_music.playing:
 		background_music.play()
+
+func stop_background_music():
+	if background_music and background_music.playing:
+		background_music.stop()
+
+func fade_out_background_music(duration: float = 1.0):
+	if background_music and background_music.playing:
+		var tween = create_tween()
+		tween.tween_property(background_music, "volume_db", -80.0, duration)
+		tween.tween_callback(stop_background_music)
 
 func play_type():
 	# Play type.wav on each keystroke

@@ -4,10 +4,7 @@
 
 [resource]
 script = ExtResource("1_1")
-art = "  ╭─────╮
-  │ ??? │
-  │ ??? │
-  ╰─────╯"
+art = "???"
 text_to_type = "corrupted memory"
 base_speed = 32.0
 level = 1

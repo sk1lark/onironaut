@@ -5,8 +5,10 @@ extends Control
 @onready var quit_button = $Content/QuitButton
 @onready var title = $Content/Title
 @onready var subtitle = $Content/Subtitle
+@onready var press_any_key = $Content/PressAnyKey
 @onready var dither_shader = $DitherLayer/DitherShader
 @onready var splash_music = $SplashMusic
+@onready var frame_panel: Panel = $Frame
 
 var dealt_sound: AudioStream
 var button_hover_tween: Tween
@@ -15,16 +17,27 @@ func _ready():
 	# Load dealt.wav for button sounds
 	dealt_sound = load("res://sounds/dealt.wav")
 	
+	# Ensure gameplay music is off on splash
+	if Engine.has_singleton("SoundManager"):
+		SoundManager.stop_background_music()
+
 	# Setup button styles
 	setup_button_style(play_button)
 	setup_button_style(quit_button)
+
+	# Setup 1-bit frame panel and divider
+	setup_frame_style()
 	
 	# Animate title entrance
 	animate_title_entrance()
 	
 	# Start splash music
-	if splash_music:
+	if splash_music and not splash_music.playing:
 		splash_music.play()
+
+	# UI juice
+	blink_press_any_key()
+	title_glow_and_wobble()
 
 func setup_button_style(button: Button):
 	# Create custom StyleBox for buttons
@@ -56,6 +69,22 @@ func setup_button_style(button: Button):
 	button.add_theme_stylebox_override("hover", hover_style)
 	button.add_theme_stylebox_override("pressed", pressed_style)
 
+func setup_frame_style():
+	# Crisp 1-bit frame around the content area
+	if frame_panel:
+		var frame_style = StyleBoxFlat.new()
+		frame_style.bg_color = Color.BLACK
+		frame_style.border_color = Color.WHITE
+		frame_style.border_width_left = 6
+		frame_style.border_width_top = 6
+		frame_style.border_width_right = 6
+		frame_style.border_width_bottom = 6
+		frame_style.corner_radius_top_left = 0
+		frame_style.corner_radius_top_right = 0
+		frame_style.corner_radius_bottom_left = 0
+		frame_style.corner_radius_bottom_right = 0
+		frame_panel.add_theme_stylebox_override("panel", frame_style)
+
 func animate_title_entrance():
 	# Title fades in with scale
 	title.modulate.a = 0.0
@@ -82,6 +111,25 @@ func pulse_title():
 	tween.set_loops()
 	tween.tween_property(title, "scale", Vector2(1.02, 1.02), 1.5)
 	tween.tween_property(title, "scale", Vector2.ONE, 1.5)
+
+func blink_press_any_key():
+	if not is_instance_valid(press_any_key):
+		return
+	press_any_key.modulate.a = 0.0
+	var t = create_tween()
+	t.set_loops()
+	t.tween_property(press_any_key, "modulate:a", 1.0, 0.8)
+	t.tween_property(press_any_key, "modulate:a", 0.0, 0.8)
+
+func title_glow_and_wobble():
+	var t = create_tween()
+	t.set_loops()
+	t.tween_property(title, "modulate", Color(1.0, 1.0, 1.0, 1.0), 1.0)
+	t.tween_property(title, "modulate", Color(1.1, 1.1, 1.1, 1.0), 1.0)
+	var w = create_tween()
+	w.set_loops()
+	w.tween_property(title, "rotation_degrees", 1.0, 1.5)
+	w.tween_property(title, "rotation_degrees", -1.0, 1.5)
 
 func _on_play_button_mouse_entered():
 	play_hover_sound()
@@ -122,24 +170,25 @@ func play_select_sound():
 		player.finished.connect(func(): player.queue_free())
 
 func _on_play_button_pressed():
+	print("Play button pressed!")
 	play_select_sound()
-	
-	# Fade out splash music
-	var music_tween = create_tween()
-	music_tween.tween_property(splash_music, "volume_db", -80.0, 0.5)
-	
+
+	# Stop splash music immediately
+	if splash_music:
+		splash_music.stop()
+
 	# Button press animation
 	var tween = create_tween()
 	tween.tween_property(play_button, "scale", Vector2(0.95, 0.95), 0.1)
 	tween.tween_property(play_button, "scale", Vector2.ONE, 0.1)
-	
+
 	# Static flash transition
 	spawn_static_flash()
-	
-	await get_tree().create_timer(0.5).timeout
-	
-	# Load main game scene
-	get_tree().change_scene_to_file("res://scenes/main.tscn")
+
+	await get_tree().create_timer(0.3).timeout
+
+	# go to upgrade shop first
+	get_tree().change_scene_to_file("res://scenes/upgrade_shop.tscn")
 
 func _on_quit_button_pressed():
 	play_select_sound()
@@ -157,11 +206,16 @@ func _on_quit_button_pressed():
 	# Quit game
 	get_tree().quit()
 
+func _unhandled_input(event: InputEvent):
+	# Allow any key to trigger Play too
+	if event is InputEventKey and event.pressed and not event.is_echo():
+		_on_play_button_pressed()
+
 func spawn_static_flash():
 	# Full screen static flash effect
 	var static_rect = ColorRect.new()
-	static_rect.size = Vector2(960, 540)
-	static_rect.position = Vector2.ZERO
+	static_rect.anchor_right = 1.0
+	static_rect.anchor_bottom = 1.0
 	static_rect.color = Color.WHITE
 	static_rect.z_index = 99
 	

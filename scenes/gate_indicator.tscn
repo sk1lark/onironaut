@@ -1,0 +1,17 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="FontFile" path="res://fonts/monogram-extended.ttf" id="1"]
+
+[node name="GateIndicator" type="Node2D"]
+script = "res://scripts/gate_indicator.gd"
+
+[node name="Label" type="Label" parent="."]
+offset_left = -20.0
+offset_top = -20.0
+offset_right = 20.0
+offset_bottom = 20.0
+theme_override_fonts/font = ExtResource("1")
+theme_override_font_sizes/font_size = 40
+text = "▲"
+horizontal_alignment = 1
+vertical_alignment = 1

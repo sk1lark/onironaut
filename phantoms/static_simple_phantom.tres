@@ -4,11 +4,7 @@
 
 [resource]
 script = ExtResource("1_1")
-art = "  o   o
-   \\ /
-    *
-   / \\
-  o   o"
+art = "*"
 text_to_type = "static"
 base_speed = 32.0
 level = 1

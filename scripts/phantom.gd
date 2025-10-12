@@ -12,12 +12,7 @@ var is_focused: bool = false
 var typed_progress: int = 0
 var original_modulate: Color
 
-# circular motion variables
-var spawn_position: Vector2
-var target_center: Vector2 = Vector2(640, 360)
-var spiral_time: float = 0.0
-var spiral_radius: float = 400.0
-var spiral_speed: float = 0.3
+var target_position: Vector2 = Vector2.ZERO  # Center-origin default target
 
 # attack system - only when player is idle
 var attack_timer: float = 0.0
@@ -31,16 +26,14 @@ func _ready():
 	original_modulate = modulate
 	setup_fade_in_animation()
 	
-	# store spawn position for spiral motion
-	spawn_position = position
-	
 	# Apply phantom data if it was set before _ready
 	if phantom_data:
 		apply_phantom_data()
 
 func setup_phantom(data: PhantomData):
 	phantom_data = data
-	move_speed = data.base_speed
+	# Enforce a reasonable minimum speed so phantoms don't appear frozen if resource speed is low
+	move_speed = max(data.base_speed, 40.0) * 2.2
 	
 	# If we're already in the tree, apply data immediately
 	if is_node_ready():
@@ -57,22 +50,17 @@ func apply_phantom_data():
 	modulate = Color.TRANSPARENT
 	animation_player.play("fade_in")
 
+	# Ensure initial layout is correct (ASCII directly above text)
+	layout_labels(0.0)
+
 func _process(delta):
 	var time = Time.get_ticks_msec() * 0.001
-	
-	# circular closing-in motion - like impending thoughts
-	spiral_time += delta * spiral_speed
-	spiral_radius = max(50.0, spiral_radius - delta * 20.0)  # slowly close in
-	
-	# calculate spiral position
-	var angle = spiral_time * 2.0  # rotate around center
-	var offset = Vector2(
-		cos(angle) * spiral_radius,
-		sin(angle) * spiral_radius
-	)
-	
-	# move toward center in spiral
-	position = target_center + offset
+
+	# Move towards target position (don't skip when target is Vector2.ZERO)
+	var to_target: Vector2 = target_position - position
+	var dist = to_target.length()
+	if dist > 0.5:
+		position += to_target.normalized() * move_speed * delta
 	
 	# Attack system - phantoms occasionally shoot static at player
 	if can_attack and attack_interval > 0.0:
@@ -82,10 +70,9 @@ func _process(delta):
 			attack_interval = randf_range(3.0, 6.0)  # Next attack in 3-6 seconds
 			shoot_static_at_player()
 	
-	# subtle floating on labels
-	var float_offset = sin(time + spawn_position.x * 0.01) * 3.0
-	art_label.position.y = -60 + float_offset
-	text_label.position.y = 30 + float_offset
+	# subtle floating on labels; keep ASCII directly above text at all times
+	var float_offset = sin(time + position.x * 0.01) * 2.0
+	layout_labels(float_offset)
 	
 	# add subtle rotation when focused
 	if is_focused:
@@ -94,8 +81,8 @@ func _process(delta):
 		var pulse = 1.1 + sin(time * 4.0) * 0.02
 		scale = Vector2(pulse, pulse)
 	else:
-		# slight tilt based on angle for more organic feel
-		rotation = sin(angle) * 0.02
+		# slight tilt based on position for more organic feel
+		rotation = sin(position.x * 0.01) * 0.02
 
 func set_focused(focused: bool):
 	is_focused = focused
@@ -103,25 +90,30 @@ func set_focused(focused: bool):
 	if focused:
 		# stark white for focused phantom
 		modulate = Color(1.0, 1.0, 1.0, 1.0)
-		# inverse colors for high contrast
-		art_label.add_theme_color_override("font_color", Color.BLACK)
-		art_label.add_theme_color_override("font_outline_color", Color.WHITE)
-		art_label.add_theme_constant_override("outline_size", 3)
-		text_label.add_theme_color_override("font_color", Color.BLACK)
-		text_label.add_theme_color_override("font_outline_color", Color.WHITE)
-		text_label.add_theme_constant_override("outline_size", 3)
+		# Keep ASCII readable but secondary; give text a stronger glow (outline)
+		art_label.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9, 1.0))
+		art_label.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 1.0))
+		art_label.add_theme_constant_override("outline_size", 1)
+		text_label.add_theme_color_override("default_color", Color(1.0, 1.0, 1.0, 1.0))
+		text_label.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 1.0))
+		text_label.add_theme_constant_override("outline_size", 2)
 		# make it larger
 		scale = Vector2(1.1, 1.1)
 	else:
-		# dim unfocused phantoms
-		modulate = Color(1.0, 1.0, 1.0, 0.4)
-		art_label.add_theme_color_override("font_color", Color.WHITE)
-		art_label.add_theme_color_override("font_outline_color", Color.BLACK)
-		art_label.add_theme_constant_override("outline_size", 0)
-		text_label.add_theme_color_override("font_color", Color.WHITE)
-		text_label.add_theme_color_override("font_outline_color", Color.BLACK)
-		text_label.add_theme_constant_override("outline_size", 0)
+		# dim unfocused phantoms but keep legible
+		modulate = Color(1.0, 1.0, 1.0, 0.85)
+		art_label.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9, 1.0))
+		art_label.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 1.0))
+		art_label.add_theme_constant_override("outline_size", 1)
+		text_label.add_theme_color_override("default_color", Color(1.0, 1.0, 1.0, 1.0))
+		text_label.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 1.0))
+		text_label.add_theme_constant_override("outline_size", 2)
 		scale = Vector2(1.0, 1.0)
+
+		# IMPORTANT: Reset text highlighting when unfocused
+		typed_progress = 0
+		text_label.text = phantom_data.text_to_type
+		layout_labels(0.0)
 
 func update_typing_progress(current_text: String):
 	typed_progress = current_text.length()
@@ -134,6 +126,9 @@ func update_typing_progress(current_text: String):
 		text_label.text = "[bgcolor=white][color=black]" + completed_part + "[/color][/bgcolor]" + remaining_part
 	else:
 		text_label.text = phantom_data.text_to_type
+
+	# Relayout after text width/height potentially changed
+	layout_labels(0.0)
 
 func complete_phantom():
 	phantom_completed.emit(self)
@@ -200,3 +195,34 @@ func _on_animation_finished(anim_name: StringName):
 func shoot_static_at_player():
 	# Emit signal that this phantom is attacking
 	phantom_attacks.emit(self)
+
+func layout_labels(offset_y: float = 0.0):
+	# Center both labels horizontally and place ASCII (art_label) directly above the typing text (text_label)
+	# Use their computed content sizes to avoid overlap regardless of text length.
+	var gap := 4.0
+
+	# RichTextLabel provides content dimensions
+	var text_w := 0.0
+	var text_h := 0.0
+	if text_label and is_instance_valid(text_label):
+		if text_label.has_method("get_content_width"):
+			text_w = float(text_label.get_content_width())
+		else:
+			text_w = float(text_label.size.x)
+		if text_label.has_method("get_content_height"):
+			text_h = float(text_label.get_content_height())
+		else:
+			text_h = float(text_label.size.y)
+		text_w = max(text_w, 1.0)
+		text_h = max(text_h, 1.0)
+		text_label.size = Vector2(text_w, text_h)
+		text_label.position = Vector2(-text_w * 0.5, 0.0 + offset_y)
+
+	# Label minimum size for ASCII art (may be multiline)
+	if art_label and is_instance_valid(art_label):
+		var art_ms = art_label.get_minimum_size() as Vector2
+		var art_w: float = max(art_ms.x, 1.0)
+		var art_h: float = max(art_ms.y, 1.0)
+		art_label.size = Vector2(art_w, art_h)
+		# Place bottom of art exactly gap pixels above top of text
+		art_label.position = Vector2(-art_w * 0.5, -(gap + art_h) + offset_y)

@@ -24,12 +24,12 @@ func setup(data: Resource, spawn_pos: Vector2):
 
 func _process(delta):
 	lifetime += delta
-	# Float toward center slowly
-	var center = Vector2(640, 360)
-	var direction = (center - position).normalized()
-	position += direction * move_speed * delta
-	
-	# Check if close enough to collect
+	# Center-origin world
+	var center = Vector2.ZERO
+	var to_center = center - position
+	if to_center.length() > 1.0:
+		position += to_center.normalized() * move_speed * delta
+
 	if position.distance_to(center) < 40.0:
 		collect()
 

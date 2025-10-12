@@ -4,10 +4,7 @@
 
 [resource]
 script = ExtResource("1_1")
-art = "   ***
-  *   *
-  *   *
-   ***"
+art = "o o"
 text_to_type = "echo"
 base_speed = 30.0
 level = 1

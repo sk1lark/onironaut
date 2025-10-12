@@ -1,0 +1,67 @@
+[gd_scene load_steps=4 format=3 uid="uid://imgsplash001"]
+
+[ext_resource type="Script" uid="uid://dwbbftk0f80xq" path="res://scripts/image_splash.gd" id="1_1"]
+[ext_resource type="Shader" uid="uid://bnl1jjr27m0k8" path="res://shaders/crt_shader.gdshader" id="2_1"]
+
+[sub_resource type="ShaderMaterial" id="1"]
+shader = ExtResource("2_1")
+shader_parameter/screen_curve = 6.0
+shader_parameter/wobble_intensity = 0.0015
+shader_parameter/glitch_intensity = 0.06
+shader_parameter/scanline_intensity = 0.9
+shader_parameter/scanline_count = 360.0
+shader_parameter/scan_thickness = 10.0
+shader_parameter/brightness = 1.1
+shader_parameter/vignette_strength = 0.8
+shader_parameter/chromatic_aberration = 0.003
+shader_parameter/phosphor_strength = 0.25
+shader_parameter/bloom_strength = 0.12
+shader_parameter/pixel_distortion = 0.3
+
+[node name="ImageSplash" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_1")
+
+[node name="CRTLayer" type="CanvasLayer" parent="."]
+layer = 101
+
+[node name="CRTShader" type="ColorRect" parent="CRTLayer"]
+material = SubResource("1")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0)
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 1)
+
+[node name="SplashImage" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -400.0
+offset_top = -400.0
+offset_right = 400.0
+offset_bottom = 400.0
+grow_horizontal = 2
+grow_vertical = 2
+expand_mode = 1
+stretch_mode = 5

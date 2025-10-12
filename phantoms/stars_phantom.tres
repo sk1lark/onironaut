@@ -4,9 +4,7 @@
 
 [resource]
 script = ExtResource("1_1")
-art = "  ,-,
- ( o.o )
-  > ^ <"
+art = "*.*"
 text_to_type = "distant memory"
 base_speed = 20.0
 level = 1

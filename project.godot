@@ -11,27 +11,31 @@ config_version=5
 [application]
 
 config/name="the onironaut"
-run/main_scene="res://scenes/splash_screen.tscn"
+run/main_scene="res://scenes/intro_screen.tscn"
 config/features=PackedStringArray("4.5", "GL Compatibility")
+boot_splash/image="uid://bn5qrb5jrhnmo"
 config/icon="res://icon.svg"
 
 [autoload]
 
 SoundManager="*res://scenes/sound_manager.tscn"
+UpgradeManager="*res://scripts/upgrade_manager.gd"
 
 [display]
 
-window/size/viewport_width=1280
-window/size/viewport_height=720
-window/size/window_width_override=1280
-window/size/window_height_override=720
+window/size/viewport_width=1080
+window/size/viewport_height=1080
+window/size/window_width_override=1080
+window/size/window_height_override=1080
 window/stretch/mode="viewport"
 
-[rendering]
+[dotnet]
 
-textures/canvas_textures/default_texture_filter=0
-renderer/rendering_method="gl_compatibility"
-renderer/rendering_method.mobile="gl_compatibility"
+project/assembly_name="the onironaut"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/godot_super-wakatime/plugin.cfg")
 
 [preset.0]
 
@@ -48,7 +52,7 @@ script_encryption_key=""
 
 [preset.0.options]
 
-vram_texture_compression/for_desktop=true
+vram_texture_compression/for_desktop=false
 vram_texture_compression/for_mobile=false
 html/export_icon=true
 html/custom_html_shell=""
@@ -58,3 +62,9 @@ html/focus_canvas_on_start=true
 html/experimental_virtual_keyboard=false
 threading/worker_pool_max_threads=1
 threading/worker_pool_low_priority_threads=true
+
+[rendering]
+
+textures/canvas_textures/default_texture_filter=0
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"

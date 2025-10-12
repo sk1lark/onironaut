@@ -4,11 +4,7 @@
 
 [resource]
 script = ExtResource("1_1")
-art = "  ┌─────┐
-  │ ▓▓▓ │
-  │ ▓▓▓ │
-  └─────┘
-    ║║║"
+art = "[ ]"
 text_to_type = "empty frame"
 base_speed = 30.0
 level = 1

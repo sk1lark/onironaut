@@ -4,7 +4,7 @@
 
 [resource]
 script = ExtResource("1_1")
-art = "|^^|"
+art = "/\\"
 text_to_type = "home"
 base_speed = 50.0
 level = 2

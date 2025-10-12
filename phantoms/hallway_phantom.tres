@@ -4,9 +4,7 @@
 
 [resource]
 script = ExtResource("1_1")
-art = "  ═══════
-  ││││││││
-  ═══════"
+art = "═══"
 text_to_type = "endless hallway"
 base_speed = 28.0
 level = 1

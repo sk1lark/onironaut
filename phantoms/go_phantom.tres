@@ -4,7 +4,7 @@
 
 [resource]
 script = ExtResource("1_1")
-art = "go"
+art = ">"
 text_to_type = "go"
 base_speed = 50.0
 level = 1

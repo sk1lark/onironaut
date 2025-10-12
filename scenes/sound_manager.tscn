@@ -14,7 +14,7 @@ script = ExtResource("1_1")
 
 [node name="BackgroundMusic" type="AudioStreamPlayer" parent="."]
 stream = ExtResource("2_1")
-autoplay = true
+autoplay = false
 bus = &"Master"
 
 [node name="TypePlayer" type="AudioStreamPlayer" parent="."]

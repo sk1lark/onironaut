@@ -4,9 +4,7 @@
 
 [resource]
 script = ExtResource("1_1")
-art = "   ...
-  .....
-   ..."
+art = "..."
 text_to_type = "quiet moment"
 base_speed = 18.0
 level = 1

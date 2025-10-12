@@ -4,11 +4,7 @@
 
 [resource]
 script = ExtResource("1_1")
-art = "    ◉
-   ╱│╲
-  ╱ │ ╲
-    │
-   ╱ ╲"
+art = "◉"
 text_to_type = "falling figure"
 base_speed = 34.0
 level = 1

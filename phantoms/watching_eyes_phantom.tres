@@ -4,12 +4,7 @@
 
 [resource]
 script = ExtResource("1_1")
-art = "    .-.
-   (o o)
-    | |
-    | |
-   _| |_
-  /     \\"
+art = "O_O"
 text_to_type = "watching you"
 base_speed = 28.0
 level = 1

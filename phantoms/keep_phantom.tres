@@ -4,7 +4,7 @@
 
 [resource]
 script = ExtResource("1_1")
-art = "keep going"
+art = "->"
 text_to_type = "keep going"
 base_speed = 50.0
 level = 1

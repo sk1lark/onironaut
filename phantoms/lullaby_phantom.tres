@@ -4,7 +4,7 @@
 
 [resource]
 script = ExtResource("1_1")
-art = "( z )\n( 0 )\n - -"
+art = "z_z"
 text_to_type = "a lullaby"
 base_speed = 24.0
 level = 1

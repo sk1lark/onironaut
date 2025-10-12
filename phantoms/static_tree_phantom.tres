@@ -4,12 +4,7 @@
 
 [resource]
 script = ExtResource("1_1")
-art = "    *
-   ***
-  *****
- *******
-   |||
-   |||"
+art = "Y"
 text_to_type = "static interference"
 base_speed = 32.0
 level = 1

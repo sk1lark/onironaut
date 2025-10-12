@@ -4,12 +4,7 @@
 
 [resource]
 script = ExtResource("1_1")
-art = "    ⊙
-   ╱│╲
-  ╱ │ ╲
-    │
-   ╱│╲
-  ′ │ ′"
+art = "⊙"
 text_to_type = "shadow self"
 base_speed = 30.0
 level = 1

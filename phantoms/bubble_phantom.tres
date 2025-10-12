@@ -4,7 +4,6 @@
 
 [resource]
 script = ExtResource("1_1")
-art = " (o.o)
-_(o.o)_"
+art = "O_O"
 text_to_type = "that song"
 base_speed = 35.0
