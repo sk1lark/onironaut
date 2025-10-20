@@ -7,17 +7,17 @@
 [sub_resource type="ShaderMaterial" id=1]
 shader = ExtResource("3_1")
 shader_parameter/screen_curve = 6.0
-shader_parameter/wobble_intensity = 0.0015
-shader_parameter/glitch_intensity = 0.06
-shader_parameter/scanline_intensity = 0.9
-	shader_parameter/scanline_count = 180.0
-	shader_parameter/scanline_intensity = 0.95
-	shader_parameter/brightness = 1.05
-shader_parameter/vignette_strength = 0.8
-shader_parameter/chromatic_aberration = 0.003
-	shader_parameter/pixel_distortion = 0.15
-	shader_parameter/phosphor_strength = 0.25
-	shader_parameter/bloom_strength = 0.12
+shader_parameter/wobble_intensity = 0.0005
+shader_parameter/glitch_intensity = 0.0
+shader_parameter/scanline_intensity = 0.85
+shader_parameter/scanline_count = 140.0
+shader_parameter/scan_thickness = 10.0
+shader_parameter/brightness = 1.1
+shader_parameter/vignette_strength = 0.35
+shader_parameter/chromatic_aberration = 0.001
+shader_parameter/phosphor_strength = 0.2
+shader_parameter/bloom_strength = 0.12
+shader_parameter/pixel_distortion = 0.0
 
 [node name="UpgradeShop" type="Control"]
 layout_mode = 3
@@ -99,10 +99,13 @@ horizontal_alignment = 1
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="UpgradeContainer" type="VBoxContainer" parent="Content/ScrollContainer"]
+[node name="UpgradeContainer" type="FlowContainer" parent="Content/ScrollContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 16
+theme_override_constants/separation = 20
+theme_override_constants/h_alignment = 1
+theme_override_constants/v_alignment = 1
+theme_override_constants/max_columns = 3
 
 [node name="ContinueButton" type="Button" parent="Content"]
 custom_minimum_size = Vector2(300, 60)

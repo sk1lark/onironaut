@@ -4,14 +4,34 @@ extends Node
 @onready var keypress_player = $KeypressPlayer
 @onready var resolve_player = $ResolvePlayer
 @onready var glitch_player = $GlitchPlayer
-@onready var background_music = $BackgroundMusic
+@onready var background_music = $BackgroundMusic  # lucidity.mp3 for gameplay
 @onready var type_player = $TypePlayer
 @onready var dealt_player = $DealtPlayer
 @onready var hurt_player = $HurtPlayer
 
+# Menu music player (splash.mp3 for shop/map/intro)
+var menu_music_player: AudioStreamPlayer = null
+var menu_music_stream: AudioStream = null
+
 func _ready():
 	load_sound_effects()
+	load_menu_music()
 	# Don't auto-start background music - let scenes control it
+
+func load_menu_music():
+	# Create a dedicated player for menu music
+	menu_music_player = AudioStreamPlayer.new()
+	menu_music_player.name = "MenuMusicPlayer"
+	menu_music_player.bus = "Master"
+	add_child(menu_music_player)
+
+	# Load splash.mp3
+	menu_music_stream = load("res://sounds/splash.mp3")
+	if menu_music_stream:
+		menu_music_player.stream = menu_music_stream
+		print("[SoundManager] loaded splash.mp3 for menu music")
+	else:
+		print("[SoundManager] WARNING: could not load splash.mp3")
 
 func load_sound_effects():
 	# Load the sound files
@@ -31,11 +51,15 @@ func load_sound_effects():
 			hurt_player.stream = hurt_sound
 
 func start_background_music():
+	# Start gameplay music (lucidity.mp3) and stop menu music
+	print("[SoundManager] starting gameplay music (lucidity.mp3)")
+	stop_menu_music()
 	if background_music and not background_music.playing:
 		background_music.play()
 
 func stop_background_music():
 	if background_music and background_music.playing:
+		print("[SoundManager] stopping gameplay music")
 		background_music.stop()
 
 func fade_out_background_music(duration: float = 1.0):
@@ -43,6 +67,18 @@ func fade_out_background_music(duration: float = 1.0):
 		var tween = create_tween()
 		tween.tween_property(background_music, "volume_db", -80.0, duration)
 		tween.tween_callback(stop_background_music)
+
+func start_menu_music():
+	# Start menu music (splash.mp3) and stop gameplay music
+	print("[SoundManager] starting menu music (splash.mp3)")
+	stop_background_music()
+	if menu_music_player and not menu_music_player.playing:
+		menu_music_player.play()
+
+func stop_menu_music():
+	if menu_music_player and menu_music_player.playing:
+		print("[SoundManager] stopping menu music")
+		menu_music_player.stop()
 
 func play_type():
 	# Play type.wav on each keystroke

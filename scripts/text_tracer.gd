@@ -68,4 +68,7 @@ func _on_hit():
     add_child(flash)
     var tw = create_tween()
     tw.tween_property(flash, "modulate:a", 0.0, 0.12)
-    tw.finished.connect(func(): if is_instance_valid(flash): flash.queue_free())
+    var _cb_flash_cleanup = func():
+        if is_instance_valid(flash):
+            flash.queue_free()
+    tw.finished.connect(_cb_flash_cleanup)

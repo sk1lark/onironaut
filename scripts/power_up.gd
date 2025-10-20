@@ -18,7 +18,7 @@ func setup(data: Resource, spawn_pos: Vector2):
 	
 	# Pulse animation
 	var tween = create_tween()
-	tween.set_loops()
+	tween.set_loops(-1)
 	tween.tween_property(self, "scale", Vector2(1.2, 1.2), 0.5)
 	tween.tween_property(self, "scale", Vector2.ONE, 0.5)
 

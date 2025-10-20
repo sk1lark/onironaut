@@ -18,12 +18,12 @@ var upgrades: Dictionary = {
 
 # upgrade costs (index = level, value = cost)
 const UPGRADE_COSTS: Dictionary = {
-	"max_health": [50, 100, 200, 400, 800],
-	"starting_combo": [75, 150, 300],
-	"rhythm_window": [100, 250, 500],
-	"phantom_slowdown": [80, 160, 320, 640],
-	"fragment_multiplier": [120, 300, 600],
-	"combo_duration": [60, 120, 240],
+	"max_health": [10, 25, 50, 100, 200],
+	"starting_combo": [0, 15, 35],
+	"rhythm_window": [20, 50, 100],
+	"phantom_slowdown": [15, 40, 80, 150],
+	"fragment_multiplier": [25, 60, 120],
+	"combo_duration": [12, 30, 60],
 }
 
 # upgrade display info

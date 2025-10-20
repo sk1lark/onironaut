@@ -21,12 +21,12 @@ const PhantomBurstScript = preload("res://scripts/phantom_burst.gd")
 const LevelManagerRes = preload("res://scripts/level_manager.gd")
 const CardChoiceModalScene = preload("res://scenes/card_choice_modal.tscn")
 const LevelMapScene = preload("res://scenes/level_map.tscn")
+const UpgradeShopScene = preload("res://scenes/upgrade_shop.tscn")
 
 # Nodes
 @onready var phantom_container = $GameplayArea/PhantomContainer
 @onready var protagonist_container = $GameplayArea/ProtagonistContainer
 @onready var gate_container = $GameplayArea/GateContainer
-@onready var health_bar = get_node_or_null("UILayer/HealthBar")
 @onready var status_text = $UILayer/StatusText
 @onready var camera = $Camera2D
 @onready var level_progress_bar = $UILayer/LevelProgressBar
@@ -70,24 +70,24 @@ var curated_words: PackedStringArray = []  # Will be set based on wave
 
 # Optional human-readable poem names (best-effort). Unknown ones fallback to "poem n".
 var poem_names: Dictionary = {
-	1: "because i could not stop for death",
-	2: "invictus",
-	3: "hope is the thing with feathers",
-	4: "ode to winter",
-	5: "rime of the ancient mariner",
-	6: "the new colossus",
-	7: "the love song of j. alfred prufrock",
-	8: "there is a certain slant of light",
+	1: "because i could not stop for death - emily dickinson",
+	2: "invictus - william ernest henley",
+	3: "hope is the thing with feathers - emily dickinson",
+	4: "ode to winter - unknown",
+	5: "rime of the ancient mariner - samuel taylor coleridge",
+	6: "the new colossus - emma lazarus",
+	7: "the love song of j. alfred prufrock - t.s. eliot",
+	8: "there is a certain slant of light - emily dickinson",
 	9: "unknown poem 9",
-	10: "song of myself",
-	11: "i wandered lonely as a cloud",
-	12: "to see a world in a grain of sand",
-	13: "the tyger",
-	14: "jabberwocky",
-	15: "stopping by woods on a snowy evening",
+	10: "song of myself - walt whitman",
+	11: "i wandered lonely as a cloud - william wordsworth",
+	12: "to see a world in a grain of sand - william blake",
+	13: "the tyger - william blake",
+	14: "jabberwocky - lewis carroll",
+	15: "stopping by woods on a snowy evening - robert frost",
 	16: "unknown poem 16",
-	17: "i dwell in possibility",
-	18: "ulysses",
+	17: "i dwell in possibility - emily dickinson",
+	18: "ulysses - alfred lord tennyson",
 	19: "to the virgins, to make much of time",
 	20: "unknown poem 20"
 }
@@ -103,9 +103,7 @@ var active_phantoms: Array = []
 var focused_phantom = null
 var current_typed_string: String = ""
 
-# Core Stats
-var health: float = 100.0
-var max_health: float = 100.0
+# Core Stats (health removed!)
 var score: int = 0
 var high_score: int = 0
 var wave: int = 1
@@ -141,11 +139,18 @@ var combo_timer: float = 0.0
 var combo_timeout: float = 3.0
 var max_combo: int = 0
 
+# NEW: Typing statistics for wave completion
+var wave_start_time: float = 0.0
+var total_keystrokes_this_wave: int = 0
+var correct_keystrokes_this_wave: int = 0
+var wave_wpm: float = 0.0
+var wave_accuracy: float = 0.0
+
 # Spawn control
 var spawn_timer: float = 0.0
-var spawn_interval: float = 1.2  # MUCH faster - action packed!
-var max_phantoms: int = 12  # More enemies on screen
-var phantoms_per_wave: int = 25  # Longer waves
+var spawn_interval: float = 0.8  # Steady spawn rate
+var max_phantoms: int = 999  # Unlimited - only limited by wave total
+var phantoms_per_wave: int = 30  # Longer waves
 var phantoms_spawned_this_wave: int = 0
 
 # Card and level systems
@@ -163,6 +168,7 @@ const MISTAKE_PROGRESS_PENALTY: float = 0.08
 # Control
 var can_accept_input: bool = false
 var game_over: bool = false
+var wave_transitioning: bool = false  # Prevent calling show_poem_then_next multiple times
 
 func _ready():
 	# Load font
@@ -215,20 +221,17 @@ func create_level_indicator():
 	level_text.add_theme_font_override("font", monogram_font)
 	level_text.add_theme_font_size_override("font_size", 20)
 	level_text.add_theme_color_override("font_color", Color(2.0, 2.0, 2.0, 1.0))
-	level_text.text = "level 1: the surface dream"
+	level_text.text = format_ui("level 1: the surface dream")
 	$UILayer.add_child(level_text)
 
 func apply_upgrades():
-	# apply persistent upgrades from UpgradeManager
+	# apply persistent upgrades from UpgradeManager (health upgrades removed!)
 	if UpgradeManager:
-		max_health += UpgradeManager.get_upgrade_value("max_health")
-		health = max_health
 		combo = int(UpgradeManager.get_upgrade_value("starting_combo"))
 		on_beat_window += UpgradeManager.get_upgrade_value("rhythm_window")
 		combo_timeout += UpgradeManager.get_upgrade_value("combo_duration")
 	else:
 		print("ERROR: UpgradeManager not found!")
-		health = max_health
 
 func spawn_gate_indicators():
 	for gate_name in gates:
@@ -297,12 +300,11 @@ func _apply_card_effect(card: CardData):
 			# improve rhythm window as proxy for speed feel
 			on_beat_window += card.value
 		"damage_reduction":
-			# reduce damage taken
-			max_health += int(card.value * 10.0)
-			health = min(health + int(card.value * 10.0), max_health)
+			# Health removed! This now gives combo duration instead
+			combo_timeout += card.value * 2.0
 		"health_regen":
-			# small heal now
-			health = min(max_health, health + int(card.value * 20.0))
+			# Health removed! This now gives starting combo instead
+			combo += int(card.value * 3.0)
 		"max_phantoms":
 			max_phantoms += int(card.value)
 		"power_up_chance":
@@ -311,7 +313,11 @@ func _apply_card_effect(card: CardData):
 func _draw_cards_and_choose():
 	if choosing_card or card_resources.is_empty():
 		return
+
+	print("[debug] _draw_cards_and_choose() starting")
 	choosing_card = true
+	can_accept_input = false  # Disable game input during card choice
+
 	drawn_cards.clear()
 	for i in 3:
 		var c = card_resources.pick_random()
@@ -322,6 +328,7 @@ func _draw_cards_and_choose():
 	modal.cards = drawn_cards.duplicate()
 	add_child(modal)
 	modal.card_chosen.connect(func(card: CardData):
+		print("[debug] card chosen:", card.name)
 		_apply_card_effect(card)
 		current_deck.append(card)
 		_recalculate_synergies()
@@ -329,7 +336,11 @@ func _draw_cards_and_choose():
 	)
 
 func _clear_card_choices():
+	print("[debug] _clear_card_choices() called, re-enabling input")
 	choosing_card = false
+	# Re-enable gameplay input after card choice
+	if not game_over:
+		can_accept_input = true
 
 func update_word_pool():
 	# Set the word pool based on current wave
@@ -345,7 +356,7 @@ func update_word_pool():
 			curated_words = PackedStringArray(poem_word_pools[1])
 
 func start_game():
-	can_accept_input = true
+	can_accept_input = false  # Disable input until popup is dismissed
 	spawn_timer = spawn_interval
 	status_text.text = format_ui("defend the gates | wave %d" % wave)
 
@@ -369,10 +380,17 @@ func start_game():
 	# Start background music for gameplay
 	SoundManager.start_background_music()
 
+	# SHOW WAVE START POPUP IMMEDIATELY
+	show_wave_start_popup()
+
 func _process(delta):
 	if game_over:
+		# Don't update UI during game over
 		return
-	
+
+	# Clean up any dead/queued phantoms left in the active_phantoms array
+	_cleanup_active_phantoms()
+
 	if not can_accept_input:
 		return
 	
@@ -396,7 +414,7 @@ func _process(delta):
 	# Spawn phantoms (but not during card choice!)
 	if not choosing_card:
 		spawn_timer -= delta
-		if spawn_timer <= 0 and active_phantoms.size() < max_phantoms:
+		if spawn_timer <= 0:
 			if phantoms_spawned_this_wave < phantoms_per_wave:
 				spawn_phantom()
 				spawn_timer = spawn_interval
@@ -407,7 +425,29 @@ func _process(delta):
 			phantom.target_position = PLAYER_POSITION
 			if phantom.position.distance_to(PLAYER_POSITION) < 40:
 				phantom_hits_player(phantom)
-	
+
+	# Debug: constantly check wave status
+	if phantoms_spawned_this_wave >= phantoms_per_wave - 2:  # Near end of wave
+		if not has_meta("debug_printed_this_frame"):
+			print("[DEBUG] wave status: spawned=", phantoms_spawned_this_wave, "/", phantoms_per_wave, " active=", active_phantoms.size(), " transitioning=", wave_transitioning)
+			set_meta("debug_printed_this_frame", true)
+			var _tmp_timer = get_tree().create_timer(0.5)
+			var _cb_clear_meta = func():
+				remove_meta("debug_printed_this_frame")
+			_tmp_timer.timeout.connect(_cb_clear_meta)
+
+	# Check wave completion (even if player isn't typing!)
+	if not wave_transitioning and phantoms_spawned_this_wave >= phantoms_per_wave and active_phantoms.size() == 0:
+		print("[DEBUG] ========== WAVE COMPLETED ==========")
+		print("[DEBUG] spawned:", phantoms_spawned_this_wave, "/ required:", phantoms_per_wave)
+		print("[DEBUG] active phantoms:", active_phantoms.size())
+		print("[DEBUG] wave_transitioning:", wave_transitioning)
+		print("[DEBUG] game_over:", game_over)
+		print("[DEBUG] calling show_poem_then_next()...")
+		wave_transitioning = true
+		# Await the poem popup sequence so flow is sequential and wave increments reliably
+		await show_poem_then_next()
+
 	# Update UI
 	update_ui()
 
@@ -456,6 +496,10 @@ func spawn_phantom():
 
 	active_phantoms.append(phantom)
 
+	# Ensure we remove the phantom from active_phantoms when it completes
+	if phantom.has_signal("phantom_completed"):
+		phantom.phantom_completed.connect(_on_phantom_completed)
+
 	phantoms_spawned_this_wave += 1
 	phantom.target_position = PLAYER_POSITION
 
@@ -468,6 +512,14 @@ func spawn_phantom():
 	# Increase visual progress fill slightly when a new phantom spawns (so bar moves forward as wave fills)
 	if phantoms_per_wave > 0:
 		level_progress_fill = clamp(float(phantoms_spawned_this_wave) / float(phantoms_per_wave), 0.0, 1.0)
+
+
+func _cleanup_active_phantoms():
+	# Remove invalid or freed phantom references from the active_phantoms array
+	for i in range(active_phantoms.size() - 1, -1, -1):
+		var p = active_phantoms[i]
+		if not is_instance_valid(p):
+			active_phantoms.remove_at(i)
 
 
 func get_nearest_gate(_pos: Vector2) -> Vector2:
@@ -483,14 +535,22 @@ func gate_breach(_phantom, _gate_name):
 	pass
 
 func phantom_hits_player(phantom):
-	# Damage player on contact
-	take_damage(10.0)  # Less punishing so game is more forgiving
+	# No damage - just remove the phantom and give feedback
 	active_phantoms.erase(phantom)
 	phantom.queue_free()
-	add_screen_shake(4.0)
+	add_screen_shake(2.0)
 	SoundManager.play_hurt()
 	if status_text:
-		status_text.text = format_ui("mind hit! | wave %d" % wave)
+		status_text.text = format_ui("phantom escaped! | wave %d" % wave)
+
+
+func _on_phantom_completed(_phantom: Node) -> void:
+	# Called when a phantom finishes (emits phantom_completed)
+	if _phantom in active_phantoms:
+		active_phantoms.erase(_phantom)
+	# Ensure the node is freed if still valid
+	if is_instance_valid(_phantom):
+		_phantom.queue_free()
 
 func _unhandled_input(event: InputEvent):
 	if not can_accept_input or game_over:
@@ -508,11 +568,12 @@ func _recalculate_synergies():
 			typing_speed_count += 1
 		elif c.effect == "health_regen":
 			regen_count += 1
-	# apply lightweight synergies
+	# apply lightweight synergies (health removed!)
 	if typing_speed_count >= 2:
 		on_beat_window = min(on_beat_window + 0.02 * (typing_speed_count - 1), 0.5)
 	if regen_count >= 2:
-		health = min(max_health, health + 2 * (regen_count - 1))
+		# Health removed! Regen cards now give combo bonuses
+		combo += regen_count - 1
 
 func handle_key_input(event: InputEventKey):
 	if event.keycode == KEY_BACKSPACE:
@@ -540,6 +601,9 @@ func process_character(character: String):
 	var current_time = Time.get_ticks_msec() / 1000.0
 	last_input_time = current_time
 
+	# Track total keystrokes for WPM calculation
+	total_keystrokes_this_wave += 1
+
 	SoundManager.play_type()
 
 	if focused_phantom == null:
@@ -552,15 +616,16 @@ func process_character(character: String):
 					current_typed_string = character
 					phantom.update_typing_progress(current_typed_string)
 					return
-		# Provide feedback if no match
+		# Provide feedback if no match (no damage!)
 		add_screen_shake(0.4)
-		take_damage(1.0)  # Less punishing for speed
+		SoundManager.play_hurt()
 	else:
 		# Continue typing focused phantom
 		var expected = focused_phantom.phantom_data.text_to_type
 
 		if expected.begins_with(current_typed_string + character):
 			current_typed_string += character
+			correct_keystrokes_this_wave += 1  # Track correct keystrokes
 			focused_phantom.update_typing_progress(current_typed_string)
 			# Fire tracer for satisfying feedback and pulse the player
 			if is_instance_valid(protagonist) and is_instance_valid(focused_phantom):
@@ -639,7 +704,9 @@ func complete_phantom():
 	explosion_tween.tween_property(explosion_label, "scale", Vector2(2.0, 2.0), 0.4)
 	explosion_tween.tween_property(explosion_label, "modulate:a", 0.0, 0.4)
 	explosion_tween.tween_property(explosion_label, "position", explosion_pos + Vector2(0, -50), 0.4)
-	explosion_tween.finished.connect(func(): explosion_label.queue_free())
+	var _cb_explosion = func():
+		explosion_label.queue_free()
+	explosion_tween.finished.connect(_cb_explosion)
 
 	# remove phantom with dissolve effect
 	var death_tween = create_tween()
@@ -647,16 +714,16 @@ func complete_phantom():
 	death_tween.tween_property(focused_phantom, "modulate:a", 0.0, 0.2)
 	death_tween.tween_property(focused_phantom, "scale", Vector2(1.5, 1.5), 0.2)
 	death_tween.tween_property(focused_phantom, "rotation", randf_range(-PI/4, PI/4), 0.2)
-	death_tween.finished.connect(func(): if is_instance_valid(focused_phantom): focused_phantom.queue_free())
+	var _cb_death = func():
+		if is_instance_valid(focused_phantom):
+			focused_phantom.queue_free()
+	death_tween.finished.connect(_cb_death)
 
 	active_phantoms.erase(focused_phantom)
 	focused_phantom = null
 	current_typed_string = ""
 
-	# Check wave completion
-	if phantoms_spawned_this_wave >= phantoms_per_wave and active_phantoms.size() == 0:
-		# Show poem name used for this wave, then advance to next wave
-		await show_poem_then_next()
+	# Note: Wave completion is now checked in _process() so it happens automatically
 
 	update_ui()
 
@@ -667,8 +734,7 @@ func mistake():
 		focused_phantom.set_focused(false)
 		focused_phantom = null
 
-	# Take damage on typing mistakes
-	take_damage(5.0)  # Less punishing
+	# No damage! Just lose combo and visual feedback
 
 	# Regress progress visually on mistake
 	level_progress_fill = max(0.0, level_progress_fill - MISTAKE_PROGRESS_PENALTY)
@@ -682,28 +748,29 @@ func mistake():
 	add_mistake_flash()
 
 func take_damage(amount: float):
-	health -= amount
-	health = max(0, health)
-
-	print("[take_damage] amount=", amount, " -> health=", health)
-
-	if health <= 0:
-		print("[take_damage] health <= 0 -> calling end_game()")
-		end_game()
-
-	update_health_bar()
+	# Health system removed! This function is kept for compatibility but does nothing
+	print("[take_damage] called with amount=", amount, " but health system is disabled")
 
 func next_wave():
-	print("[debug] next_wave() called. current wave:", wave)
+	print("[DEBUG] ========== next_wave() START ==========")
+	print("[DEBUG] previous wave:", wave)
 	wave += 1
+	print("[DEBUG] new wave:", wave)
 	phantoms_spawned_this_wave = 0
-	spawn_interval = max(0.4, spawn_interval - 0.15)  # Gets intense FAST
-	max_phantoms = min(20, max_phantoms + 3)  # More chaos each wave
+	wave_transitioning = false  # Reset transition flag for new wave
+	spawn_interval = max(0.4, spawn_interval - 0.05)  # Gets intense gradually
+	# max_phantoms stays unlimited
+
+	# Reset typing statistics for new wave
+	wave_start_time = Time.get_ticks_msec() / 1000.0
+	total_keystrokes_this_wave = 0
+	correct_keystrokes_this_wave = 0
 
 	# Reset visual progress fill for the new wave
 	level_progress_fill = 0.0
 
 	# Update word pool for new wave
+	print("[DEBUG] updating word pool...")
 	update_word_pool()
 
 	# Level progression check and card reward
@@ -728,7 +795,9 @@ func next_wave():
 
 	var flash_tween = create_tween()
 	flash_tween.tween_property(flash, "modulate:a", 0.0, 0.5)
-	flash_tween.finished.connect(func(): flash.queue_free())
+	var _cb_flash = func():
+		flash.queue_free()
+	flash_tween.finished.connect(_cb_flash)
 
 	if status_text:
 		status_text.text = format_ui("wave %d | combo x%d" % [wave, combo])
@@ -742,29 +811,275 @@ func next_wave():
 			var falloff = 0.6 - (0.02 * (wave - 1))
 			sm.set_shader_parameter("falloff", clamp(falloff, 0.3, 0.6))
 
-	# Show ASCII level map before cards
-	await show_level_map()
+	# Show ASCII level map before cards (skip for wave 2 after completing wave 1)
+	if wave != 2:
+		print("[DEBUG] about to await show_level_map()...")
+		await show_level_map()
+		print("[DEBUG] show_level_map() await completed!")
 
-	# Offer cards each wave (after map is dismissed)
-	_draw_cards_and_choose()
+		# Offer cards each wave (after map is dismissed)
+		print("[DEBUG] calling _draw_cards_and_choose()...")
+		_draw_cards_and_choose()
+	else:
+		# After wave 1 completion, show upgrade shop instead
+		print("[DEBUG] wave 2 reached (after wave 1), showing upgrade shop...")
+		await show_upgrade_shop_after_wave_1()
+		print("[DEBUG] upgrade shop dismissed, showing wave start popup...")
+		# Show wave start popup for wave 2
+		show_wave_start_popup()
+	print("[DEBUG] ========== next_wave() END ==========")
+
+func show_upgrade_shop_after_wave_1():
+	# Create and show upgrade shop after wave 1 completion
+	var upgrade_shop = UpgradeShopScene.instantiate()
+	add_child(upgrade_shop)
+
+	# Wait for upgrade shop to be dismissed (when player continues)
+	await upgrade_shop.tree_exited
+
+	print("[DEBUG] upgrade shop dismissed, continuing to wave 2...")
+
+	# Restart gameplay music (lucidity.mp3) after shop closes
+	SoundManager.start_background_music()
 
 func show_poem_then_next():
-	print("[debug] show_poem_then_next() called for wave:", wave)
+	print("[DEBUG] ========== show_poem_then_next() START ==========")
+	print("[DEBUG] current wave:", wave)
+	print("[DEBUG] game_over:", game_over)
+
+	# Check if game is over - don't advance if player died
+	if game_over:
+		print("[DEBUG] game_over is true, skipping wave transition")
+		return
+
+	# Disable input while showing victory popup
+	can_accept_input = false
+
 	# Determine poem name for the current wave (use cycle logic to match update_word_pool)
 	var poem_idx = wave
 	if not poem_word_pools.has(poem_idx):
 		poem_idx = ((wave - 1) % 20) + 1
 
 	var poem_name = poem_names.get(poem_idx, "poem %d" % poem_idx)
-	# Lowercase UI requirement
-	if status_text:
-		status_text.text = format_ui("poem: %s" % poem_name)
+	print("[DEBUG] showing poem:", poem_name)
 
-	# Wait a short duration so the player can read the poem title, then schedule next_wave without awaiting
-	var timer = get_tree().create_timer(1.8)
-	timer.timeout.connect(func(): call_deferred("next_wave"))
+	# Calculate typing statistics for this wave
+	var wave_end_time = Time.get_ticks_msec() / 1000.0
+	var wave_duration_minutes = max(0.1, (wave_end_time - wave_start_time) / 60.0)  # Avoid division by zero
+	
+	if total_keystrokes_this_wave > 0:
+		wave_accuracy = float(correct_keystrokes_this_wave) / float(total_keystrokes_this_wave) * 100.0
+	else:
+		wave_accuracy = 0.0
+	
+	# WPM = (characters typed / 5) / time in minutes
+	wave_wpm = (correct_keystrokes_this_wave / 5.0) / wave_duration_minutes
+
+	# Create BIG CENTRAL VICTORY POPUP IMMEDIATELY
+	show_wave_complete_popup(poem_name)
+
+	# Wait for player to press any key to continue
+	print("[DEBUG] waiting for player to press any key...")
+	var key_pressed = false
+	while not key_pressed and not game_over:
+		await get_tree().process_frame
+		# Check for any key press
+		for key in range(KEY_0, KEY_Z + 1):
+			if Input.is_key_pressed(key):
+				key_pressed = true
+				SoundManager.play_dealt()
+				break
+		# Also check common keys
+		if Input.is_key_pressed(KEY_SPACE) or Input.is_key_pressed(KEY_ENTER) or Input.is_key_pressed(KEY_ESCAPE):
+			key_pressed = true
+			SoundManager.play_dealt()
+
+	# Remove popup
+	if has_node("UILayer/WaveCompletePopup"):
+		$UILayer/WaveCompletePopup.queue_free()
+
+	print("[DEBUG] key pressed, calling next_wave...")
+	if not game_over:
+		next_wave()  # Call directly instead of deferred
+
+	print("[DEBUG] ========== show_poem_then_next() END ==========")
+
+func show_wave_start_popup():
+	# Create a BIG CENTRAL POPUP for wave start
+	print("[DEBUG] ========== SHOWING WAVE START POPUP ==========")
+	var popup = Control.new()
+	popup.name = "WaveStartPopup"
+	popup.set_anchors_preset(Control.PRESET_FULL_RECT)
+	popup.mouse_filter = Control.MOUSE_FILTER_STOP
+	popup.z_index = 100  # Make sure it's on top!
+
+	# Dark overlay background
+	var overlay = ColorRect.new()
+	overlay.color = Color(0, 0, 0, 0.85)
+	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	popup.add_child(overlay)
+
+	# Center container
+	var center = VBoxContainer.new()
+	center.set_anchors_preset(Control.PRESET_CENTER)
+	center.offset_left = -400
+	center.offset_top = -200
+	center.offset_right = 400
+	center.offset_bottom = 200
+	center.add_theme_constant_override("separation", 30)
+
+	# Wave number - BIG
+	var wave_title = Label.new()
+	wave_title.text = format_ui("wave %d" % wave)
+	wave_title.add_theme_font_override("font", monogram_font)
+	wave_title.add_theme_font_size_override("font_size", 100)
+	wave_title.add_theme_color_override("font_color", Color(2.5, 2.5, 2.5))
+	wave_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	center.add_child(wave_title)
+
+	# Get poem name for this wave
+	var poem_idx = wave
+	if not poem_word_pools.has(poem_idx):
+		poem_idx = ((wave - 1) % 20) + 1
+	var poem_name = poem_names.get(poem_idx, "poem %d" % poem_idx)
+
+	# Poem name
+	var poem_label = Label.new()
+	poem_label.text = poem_name.to_lower()
+	poem_label.add_theme_font_override("font", monogram_font)
+	poem_label.add_theme_font_size_override("font_size", 36)
+	poem_label.add_theme_color_override("font_color", Color(1.8, 1.8, 1.8))
+	poem_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	center.add_child(poem_label)
+
+	# Ready prompt
+	var ready_prompt = Label.new()
+	ready_prompt.text = format_ui("press any key to start")
+	ready_prompt.add_theme_font_override("font", monogram_font)
+	ready_prompt.add_theme_font_size_override("font_size", 28)
+	ready_prompt.add_theme_color_override("font_color", Color(2.0, 2.0, 2.0))
+	ready_prompt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	center.add_child(ready_prompt)
+
+	# Blink animation for ready prompt
+	# Start a safe coroutine-based blink (avoid set_loops to prevent engine infinite-loop detection)
+	_start_blink(ready_prompt, 0.3, 0.8, 1.0, 0.8)
+
+	popup.add_child(center)
+	$UILayer.add_child(popup)
+
+	# Animate popup entrance
+	popup.modulate.a = 0.0
+	var entrance_tween = create_tween()
+	entrance_tween.tween_property(popup, "modulate:a", 1.0, 0.3)
+
+	# Wait for player to press any key
+	print("[DEBUG] waiting for key press to start wave...")
+	await _wait_for_any_key()
+
+	# Remove popup
+	print("[DEBUG] key pressed! removing popup and starting wave...")
+	popup.queue_free()
+
+	# Enable input
+	can_accept_input = true
+	print("[DEBUG] wave started! input enabled!")
+
+func _wait_for_any_key():
+	var key_pressed = false
+	while not key_pressed:
+		await get_tree().process_frame
+		# Check for any key press
+		if Input.is_key_pressed(KEY_SPACE) or Input.is_key_pressed(KEY_ENTER):
+			key_pressed = true
+			SoundManager.play_dealt()
+			break
+		# Check any letter/number key
+		for key in range(KEY_A, KEY_Z + 1):
+			if Input.is_key_pressed(key):
+				key_pressed = true
+				SoundManager.play_dealt()
+				break
+		if key_pressed:
+			break
+
+
+
+
+func show_wave_complete_popup(poem_name: String):
+	# Create a BIG CENTRAL POPUP for wave completion
+	var popup = Control.new()
+	popup.name = "WaveCompletePopup"
+	popup.set_anchors_preset(Control.PRESET_FULL_RECT)
+	popup.mouse_filter = Control.MOUSE_FILTER_STOP
+	popup.z_index = 100  # Make sure it's on top!
+
+	# Dark overlay background
+	var overlay = ColorRect.new()
+	overlay.color = Color(0, 0, 0, 0.8)
+	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	popup.add_child(overlay)
+
+	# Center container
+	var center = VBoxContainer.new()
+	center.set_anchors_preset(Control.PRESET_CENTER)
+	center.offset_left = -400
+	center.offset_top = -200
+	center.offset_right = 400
+	center.offset_bottom = 200
+	center.add_theme_constant_override("separation", 20)
+
+	# Title
+	var title = Label.new()
+	title.text = format_ui("WAVE %d CLEARED!" % wave)
+	title.add_theme_font_override("font", monogram_font)
+	title.add_theme_font_size_override("font_size", 72)
+	title.add_theme_color_override("font_color", Color(2.0, 2.0, 2.0))
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	center.add_child(title)
+
+	# Poem name
+	var poem_label = Label.new()
+	poem_label.text = format_ui("poem: %s" % poem_name.to_lower())
+	poem_label.add_theme_font_override("font", monogram_font)
+	poem_label.add_theme_font_size_override("font_size", 32)
+	poem_label.add_theme_color_override("font_color", Color(1.5, 1.5, 1.5))
+	poem_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	center.add_child(poem_label)
+
+	# Stats
+	var stats = Label.new()
+	stats.text = format_ui("score: %d | combo: x%d | fragments: +%d\nwpm: %.1f | accuracy: %.1f%%" % [score, max_combo, fragments_earned_this_run, wave_wpm, wave_accuracy])
+	stats.add_theme_font_override("font", monogram_font)
+	stats.add_theme_font_size_override("font_size", 28)
+	stats.add_theme_color_override("font_color", Color(1.2, 1.2, 1.2))
+	stats.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	center.add_child(stats)
+
+	# Continue prompt
+	var continue_prompt = Label.new()
+	continue_prompt.text = format_ui("press any key to continue")
+	continue_prompt.add_theme_font_override("font", monogram_font)
+	continue_prompt.add_theme_font_size_override("font_size", 24)
+	continue_prompt.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
+	continue_prompt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	center.add_child(continue_prompt)
+
+	# Blink animation for continue prompt
+	# Start a safe coroutine-based blink (avoid set_loops to prevent engine infinite-loop detection)
+	_start_blink(continue_prompt, 0.3, 0.8, 1.0, 0.8)
+
+	popup.add_child(center)
+	$UILayer.add_child(popup)
+
+	# Animate popup entrance
+	popup.modulate.a = 0.0
+	var entrance_tween = create_tween()
+	entrance_tween.tween_property(popup, "modulate:a", 1.0, 0.3)
 
 func show_level_map():
+	print("[debug] show_level_map() called for wave:", wave)
+
 	# Disable input during map display
 	can_accept_input = false
 
@@ -776,8 +1091,13 @@ func show_level_map():
 	# Wait for map to be dismissed
 	await level_map.map_dismissed
 
+	print("[debug] level_map dismissed! re-enabling input")
+
 	# Re-enable input
-	can_accept_input = true
+	if not game_over:
+		can_accept_input = true
+	else:
+		print("[debug] game_over=true, not re-enabling input")
 
 func update_level_text():
 	if level_text:
@@ -790,11 +1110,12 @@ func update_level_text():
 
 func update_ui():
 	if status_text:
-		var combo_text = (" | x%d" % combo) if combo > 0 else ""
+		var combo_text = (" | combo x%d" % combo) if combo > 0 else ""
 		var rhythm_text = " [R]" if rhythm_bonus_active else ""
-		status_text.text = format_ui("wave %d | score %d%s%s" % [wave, score, combo_text, rhythm_text])
+		var phantoms_remaining = phantoms_per_wave - phantoms_spawned_this_wave + active_phantoms.size()
+		status_text.text = format_ui("wave %d | phantoms: %d | score: %d%s%s" % [wave, phantoms_remaining, score, combo_text, rhythm_text])
 
-	update_health_bar()
+	# No health bar anymore!
 	update_level_text()
 	update_level_progress_bar()
 	# Show current input in cursor if present
@@ -821,12 +1142,8 @@ func clear_focus():
 	current_typed_string = ""
 
 func update_health_bar():
-	# HealthBar nodes were replaced with a single progress bar. If a HealthBar node exists, keep updating it.
-	if health_bar and is_instance_valid(health_bar):
-		var health_percent = health / max_health
-		var max_width = 760.0
-		var new_width = max_width * health_percent
-		health_bar.size = Vector2(new_width, 30.0)
+	# Health bar removed - using progress bar only now
+	pass
 
 func update_level_progress_bar():
 	if level_progress_bar and level_progress_label:
@@ -836,7 +1153,7 @@ func update_level_progress_bar():
 		level_progress_bar.size = Vector2(new_width, 20.0)
 
 		# Update label (concise black/white display)
-		level_progress_label.text = "wave: %d/%d" % [phantoms_spawned_this_wave, phantoms_per_wave]
+		level_progress_label.text = format_ui("wave: %d/%d" % [phantoms_spawned_this_wave, phantoms_per_wave])
 
 func add_screen_shake(amount: float):
 	if camera:
@@ -882,11 +1199,14 @@ func add_mistake_flash():
 	# Quick fade out
 	var tween = create_tween()
 	tween.tween_property(flash, "modulate:a", 0.0, 0.3)
-	tween.finished.connect(func(): flash.queue_free())
+	var _cb_flash2 = func():
+		flash.queue_free()
+	tween.finished.connect(_cb_flash2)
 
 func end_game():
 	game_over = true
 	can_accept_input = false
+	choosing_card = false  # Cancel any card selection
 
 	# Ensure the scene tree is not accidentally paused by any awaiting code or external platform
 	# (some HTML5 tooling or platform integrations can pause the main loop; force unpause here)
@@ -895,6 +1215,36 @@ func end_game():
 		get_tree().paused = false
 
 	print("[end_game] game_over set, inputs disabled. Forcing get_tree().paused = false")
+
+	# Clear ALL active phantoms from screen (including any that might be spawning)
+	for phantom in active_phantoms:
+		if phantom and is_instance_valid(phantom):
+			phantom.queue_free()
+	active_phantoms.clear()
+	focused_phantom = null
+	current_typed_string = ""
+
+	# Clear any lingering phantom nodes in container
+	if phantom_container:
+		for child in phantom_container.get_children():
+			if is_instance_valid(child):
+				child.queue_free()
+
+	# Hide the progress bar and related UI since we only want the status text
+	if level_progress_bar:
+		level_progress_bar.visible = false
+	if level_progress_label:
+		level_progress_label.visible = false
+	if has_node("UILayer/Cursor"):
+		$UILayer/Cursor.visible = false
+	if level_text:
+		level_text.visible = false
+
+	# Remove any card choice modals or level maps that might be open
+	for child in get_children():
+		if child is CardChoiceModal or child.name == "LevelMap":
+			print("[end_game] removing lingering UI node:", child.name)
+			child.queue_free()
 
 	if score > high_score:
 		high_score = score
@@ -905,14 +1255,85 @@ func end_game():
 		UpgradeManager.add_fragments(fragments_earned_this_run)
 		UpgradeManager.record_run_end(wave, max_combo, phantoms_defeated_this_run)
 
-	# show game over message with motivators
-	if status_text:
-		var motivator = get_motivational_message()
-		status_text.text = "dream collapsed | %s\nfragments: %d | score: %d | [r]estart | [u]pgrades" % [
-			motivator,
-			fragments_earned_this_run,
-			score
-		]
+	# Show BIG CENTRAL GAME OVER POPUP
+	show_game_over_popup()
+
+func show_game_over_popup():
+	# Create a BIG CENTRAL POPUP for game over
+	var popup = Control.new()
+	popup.name = "GameOverPopup"
+	popup.set_anchors_preset(Control.PRESET_FULL_RECT)
+	popup.mouse_filter = Control.MOUSE_FILTER_STOP
+	popup.z_index = 100  # Make sure it's on top!
+
+	# Dark overlay background
+	var overlay = ColorRect.new()
+	overlay.color = Color(0, 0, 0, 0.9)
+	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	popup.add_child(overlay)
+
+	# Center container
+	var center = VBoxContainer.new()
+	center.set_anchors_preset(Control.PRESET_CENTER)
+	center.offset_left = -450
+	center.offset_top = -250
+	center.offset_right = 450
+	center.offset_bottom = 250
+	center.add_theme_constant_override("separation", 25)
+
+	# Title
+	var title = Label.new()
+	title.text = format_ui("DREAM COLLAPSED")
+	title.add_theme_font_override("font", monogram_font)
+	title.add_theme_font_size_override("font_size", 80)
+	title.add_theme_color_override("font_color", Color(2.0, 0.5, 0.5))
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	center.add_child(title)
+
+	# Motivational message
+	var motivator = get_motivational_message()
+	var motivator_label = Label.new()
+	motivator_label.text = motivator
+	motivator_label.add_theme_font_override("font", monogram_font)
+	motivator_label.add_theme_font_size_override("font_size", 36)
+	motivator_label.add_theme_color_override("font_color", Color(1.5, 1.5, 1.5))
+	motivator_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	center.add_child(motivator_label)
+
+	# Stats
+	var stats = Label.new()
+	stats.text = format_ui("wave reached: %d\nfragments earned: %d\nscore: %d\nbest combo: x%d" % [wave, fragments_earned_this_run, score, max_combo])
+	stats.add_theme_font_override("font", monogram_font)
+	stats.add_theme_font_size_override("font_size", 28)
+	stats.add_theme_color_override("font_color", Color(1.2, 1.2, 1.2))
+	stats.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	center.add_child(stats)
+
+	# Spacer
+	var spacer = Control.new()
+	spacer.custom_minimum_size = Vector2(0, 20)
+	center.add_child(spacer)
+
+	# Options
+	var options = Label.new()
+	options.text = format_ui("[R] RESTART        [U] UPGRADES")
+	options.add_theme_font_override("font", monogram_font)
+	options.add_theme_font_size_override("font_size", 32)
+	options.add_theme_color_override("font_color", Color(2.0, 2.0, 2.0))
+	options.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	center.add_child(options)
+
+	# Blink animation for options
+	# Start a safe coroutine-based blink (avoid set_loops to prevent engine infinite-loop detection)
+	_start_blink(options, 0.5, 0.8, 1.0, 0.8)
+
+	popup.add_child(center)
+	$UILayer.add_child(popup)
+
+	# Animate popup entrance
+	popup.modulate.a = 0.0
+	var entrance_tween = create_tween()
+	entrance_tween.tween_property(popup, "modulate:a", 1.0, 0.5)
 
 func get_motivational_message() -> String:
 	var messages = []
@@ -951,16 +1372,17 @@ func get_motivational_message() -> String:
 	return messages.pick_random()
 
 func _input(event):
-	if not game_over:
-		return
-
-	if event is InputEventKey and event.pressed and not event.is_echo():
+	# Only handle restart/upgrade keys when game is over
+	if game_over and event is InputEventKey and event.pressed and not event.is_echo():
+		print("[_input] game_over=true, key pressed:", event.keycode)
 		if event.keycode == KEY_R:
 			# instant restart
+			print("[_input] restarting game!")
 			SoundManager.play_dealt()
 			get_tree().reload_current_scene()
 		elif event.keycode == KEY_U:
 			# go to upgrade shop
+			print("[_input] going to upgrade shop!")
 			SoundManager.play_dealt()
 			get_tree().change_scene_to_file("res://scenes/upgrade_shop.tscn")
 
@@ -976,3 +1398,23 @@ func load_high_score():
 		if file:
 			high_score = file.get_32()
 			file.close()
+
+
+# Helper to start a safe blink animation without using Tween.set_loops()
+func _start_blink(target: Node, a1: float, dur1: float, a2: float, dur2: float) -> void:
+	# Use call_deferred so this function can be invoked from _ready/_enter_tree without order issues
+	call_deferred("_blink_loop", target, a1, dur1, a2, dur2)
+
+
+func _blink_loop(target: Node, a1: float, dur1: float, a2: float, dur2: float) -> void:
+	# Keep blinking while the target is valid and in the scene tree
+	if target == null:
+		return
+	while is_instance_valid(target) and target.get_parent() != null:
+		# Fade to a1 then to a2
+		var tween = create_tween()
+		tween.tween_property(target, "modulate:a", a1, dur1).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		tween.tween_property(target, "modulate:a", a2, dur2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		await tween.finished
+		# Small pause to avoid hogging the main loop
+		await get_tree().process_frame

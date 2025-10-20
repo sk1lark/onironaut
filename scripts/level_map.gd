@@ -12,15 +12,18 @@ var level_manager
 signal map_dismissed
 
 func _ready():
+	# Play menu music during map view (pauses gameplay)
+	SoundManager.stop_background_music()
+	SoundManager.start_menu_music()
+
 	# Blink the continue prompt
 	start_blink_animation()
 
 	# Auto-dismiss the map after a timeout in case input isn't received
 	var auto_timer = get_tree().create_timer(8.0)
-	auto_timer.timeout.connect(func():
-		map_dismissed.emit()
-		queue_free()
-	)
+	var _cb_auto_dismiss = func():
+		_dismiss_and_resume()
+	auto_timer.timeout.connect(_cb_auto_dismiss)
 
 	# Debug: confirm this script was loaded by the engine
 	print("[level_map.gd] _ready() loaded - map_container=" , map_container)
@@ -123,23 +126,29 @@ func update_level_info():
 	var level_desc = level_info_data.get("description", "")
 
 	# Use lowercase UI
-	level_info.text = "level %d: %s\n%s" % [current_level, level_name.to_lower(), level_desc.to_lower()]
+	var formatted_text = "level %d: %s\n%s" % [current_level, level_name.to_lower(), level_desc.to_lower()]
+	level_info.text = formatted_text.to_lower()
 
 func start_blink_animation():
 	var tween = create_tween()
-	tween.set_loops()
+	tween.set_loops(-1)
 	tween.tween_property(continue_label, "modulate:a", 0.3, 0.8)
 	tween.tween_property(continue_label, "modulate:a", 1.0, 0.8)
+
+func _dismiss_and_resume():
+	# Resume gameplay music when leaving map
+	SoundManager.stop_menu_music()
+	SoundManager.start_background_music()
+	map_dismissed.emit()
+	queue_free()
 
 func _input(event):
 	# Accept both keypress and mouse click so players using mouse can dismiss
 	if event is InputEventKey and event.pressed:
 		accept_event()
 		SoundManager.play_dealt()
-		map_dismissed.emit()
-		queue_free()
+		_dismiss_and_resume()
 	elif event is InputEventMouseButton and event.pressed:
 		accept_event()
 		SoundManager.play_dealt()
-		map_dismissed.emit()
-		queue_free()
+		_dismiss_and_resume()

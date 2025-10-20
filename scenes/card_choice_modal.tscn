@@ -1,15 +1,17 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=3 format=3 uid="uid://jj08px5ritlv"]
 
-[ext_resource type="Script" path="res://scripts/card_choice_modal.gd" id="1_1"]
-[ext_resource type="FontFile" path="res://fonts/monogram-extended.ttf" id="2_1"]
+[ext_resource type="Script" uid="uid://djep7ooc1s8bq" path="res://scripts/card_choice_modal.gd" id="1_1"]
+[ext_resource type="FontFile" uid="uid://boipgfyx6mikt" path="res://fonts/monogram-extended.ttf" id="2_1"]
 
 [node name="CardChoiceModal" type="Control"]
-script = ExtResource("1_1")
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 mouse_filter = 2
+script = ExtResource("1_1")
 
 [node name="DarkOverlay" type="ColorRect" parent="."]
 layout_mode = 1
@@ -18,11 +20,11 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0, 0, 0, 0.85)
 mouse_filter = 2
+color = Color(0, 0, 0, 0.85)
 
 [node name="Panel" type="ColorRect" parent="."]
-anchors_preset = 8
+layout_mode = 0
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
@@ -31,36 +33,35 @@ offset_left = -450.0
 offset_top = -280.0
 offset_right = 450.0
 offset_bottom = 280.0
+mouse_filter = 2
 color = Color(0.05, 0.05, 0.05, 1)
 
 [node name="VBox" type="VBoxContainer" parent="Panel"]
-layout_mode = 2
-anchors_preset = 15
+custom_minimum_size = Vector2(780, 380)
+layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
-custom_minimum_size = Vector2(780, 380)
 
 [node name="Title" type="Label" parent="Panel/VBox"]
 layout_mode = 2
-text = "╔═══ CHOOSE YOUR BOON ═══╗"
-horizontal_alignment = 1
-vertical_alignment = 1
 theme_override_colors/font_color = Color(2, 2, 2, 1)
 theme_override_fonts/font = ExtResource("2_1")
 theme_override_font_sizes/font_size = 32
+text = "╔═══ CHOOSE YOUR BOON ═══╗"
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="Options" type="HBoxContainer" parent="Panel/VBox"]
+custom_minimum_size = Vector2(860, 360)
 layout_mode = 2
 size_flags_vertical = 3
-custom_minimum_size = Vector2(860, 360)
 theme_override_constants/separation = 20
 
 [node name="Hint" type="Label" parent="Panel/VBox"]
 layout_mode = 2
-text = "press 1, 2, or 3 to select"
-horizontal_alignment = 1
-vertical_alignment = 1
 theme_override_colors/font_color = Color(1.5, 1.5, 1.5, 1)
 theme_override_fonts/font = ExtResource("2_1")
 theme_override_font_sizes/font_size = 20
-
+text = "press 1, 2, or 3 to select"
+horizontal_alignment = 1
+vertical_alignment = 1

@@ -16,10 +16,9 @@ var button_hover_tween: Tween
 func _ready():
 	# Load dealt.wav for button sounds
 	dealt_sound = load("res://sounds/dealt.wav")
-	
-	# Ensure gameplay music is off on splash
-	if Engine.has_singleton("SoundManager"):
-		SoundManager.stop_background_music()
+
+	# Start menu music (splash.mp3) and stop gameplay music
+	SoundManager.start_menu_music()
 
 	# Setup button styles
 	setup_button_style(play_button)
@@ -27,13 +26,9 @@ func _ready():
 
 	# Setup 1-bit frame panel and divider
 	setup_frame_style()
-	
+
 	# Animate title entrance
 	animate_title_entrance()
-	
-	# Start splash music
-	if splash_music and not splash_music.playing:
-		splash_music.play()
 
 	# UI juice
 	blink_press_any_key()
@@ -108,7 +103,7 @@ func animate_title_entrance():
 func pulse_title():
 	# Continuous subtle pulse on title
 	var tween = create_tween()
-	tween.set_loops()
+	tween.set_loops(-1)
 	tween.tween_property(title, "scale", Vector2(1.02, 1.02), 1.5)
 	tween.tween_property(title, "scale", Vector2.ONE, 1.5)
 
@@ -117,17 +112,17 @@ func blink_press_any_key():
 		return
 	press_any_key.modulate.a = 0.0
 	var t = create_tween()
-	t.set_loops()
+	t.set_loops(-1)
 	t.tween_property(press_any_key, "modulate:a", 1.0, 0.8)
 	t.tween_property(press_any_key, "modulate:a", 0.0, 0.8)
 
 func title_glow_and_wobble():
 	var t = create_tween()
-	t.set_loops()
+	t.set_loops(-1)
 	t.tween_property(title, "modulate", Color(1.0, 1.0, 1.0, 1.0), 1.0)
 	t.tween_property(title, "modulate", Color(1.1, 1.1, 1.1, 1.0), 1.0)
 	var w = create_tween()
-	w.set_loops()
+	w.set_loops(-1)
 	w.tween_property(title, "rotation_degrees", 1.0, 1.5)
 	w.tween_property(title, "rotation_degrees", -1.0, 1.5)
 
@@ -156,7 +151,9 @@ func play_hover_sound():
 		player.volume_db = -15.0
 		player.pitch_scale = 1.2
 		player.play()
-		player.finished.connect(func(): player.queue_free())
+		var _cb_hdone = func():
+			player.queue_free()
+		player.finished.connect(_cb_hdone)
 
 func play_select_sound():
 	# Full volume dealt sound on selection
@@ -167,15 +164,13 @@ func play_select_sound():
 		player.volume_db = 0.0
 		player.pitch_scale = 1.0
 		player.play()
-		player.finished.connect(func(): player.queue_free())
+		var _cb_sdone = func():
+			player.queue_free()
+		player.finished.connect(_cb_sdone)
 
 func _on_play_button_pressed():
 	print("Play button pressed!")
 	play_select_sound()
-
-	# Stop splash music immediately
-	if splash_music:
-		splash_music.stop()
 
 	# Button press animation
 	var tween = create_tween()
@@ -187,8 +182,8 @@ func _on_play_button_pressed():
 
 	await get_tree().create_timer(0.3).timeout
 
-	# go to upgrade shop first
-	get_tree().change_scene_to_file("res://scenes/upgrade_shop.tscn")
+	# go to main game (music will continue playing there)
+	get_tree().change_scene_to_file("res://scenes/main.tscn")
 
 func _on_quit_button_pressed():
 	play_select_sound()
@@ -214,9 +209,10 @@ func _unhandled_input(event: InputEvent):
 func spawn_static_flash():
 	# Full screen static flash effect
 	var static_rect = ColorRect.new()
-	static_rect.anchor_right = 1.0
-	static_rect.anchor_bottom = 1.0
+	static_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
 	static_rect.color = Color.WHITE
+	# Ensure fully visible at start
+	static_rect.modulate.a = 1.0
 	static_rect.z_index = 99
 	
 	# Add static shader
@@ -227,11 +223,13 @@ func spawn_static_flash():
 	static_rect.material = shader_mat
 	
 	add_child(static_rect)
-	
-	# Quick flash
+
+	# Quick flash — fade out then free
 	var tween = create_tween()
+	var _cb_static_free = func():
+		static_rect.queue_free()
 	tween.tween_property(static_rect, "modulate:a", 0.0, 0.2)
-	tween.finished.connect(func(): static_rect.queue_free())
+	tween.finished.connect(_cb_static_free)
 
 func _input(event):
 	# Allow ESC to quit

@@ -10,10 +10,10 @@ config_version=5
 
 [application]
 
-config/name="the onironaut"
+config/name="the oneironaut"
 run/main_scene="res://scenes/intro_screen.tscn"
 config/features=PackedStringArray("4.5", "GL Compatibility")
-boot_splash/image="uid://bn5qrb5jrhnmo"
+boot_splash/image="uid://bpeybd53pgn0n"
 config/icon="res://icon.svg"
 
 [autoload]

@@ -48,7 +48,7 @@ func _process(delta):
 func start_idle_animations():
 	# Add a subtle rotation wobble using a tween
 	var wobble_tween = create_tween()
-	wobble_tween.set_loops()
+	wobble_tween.set_loops(-1)
 	wobble_tween.tween_property(body_sprite, "rotation", -0.1, 1.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	wobble_tween.tween_property(body_sprite, "rotation", 0.1, 1.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
